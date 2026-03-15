@@ -16,13 +16,9 @@ public class PlayerController : MonoBehaviour
     public bool IsWaveLanding { get; private set; }
     private float waveLandDirection;
 
-    // Slope handling
-    private PhysicsCheck physics;
-
     private void Awake()
     {
         Rb = GetComponent<Rigidbody2D>();
-        physics = GetComponent<PhysicsCheck>();
 
         if (baseMovementData != null)
             Data = baseMovementData.Clone();
@@ -40,9 +36,11 @@ public class PlayerController : MonoBehaviour
             Rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             currentMaxSpeed = Data.moveSpeed;
 
-            // Apply a physics material with friction to help grip slopes
+            // Zero-friction physics material.
+            // All movement control is handled in code — non-zero friction
+            // fights the velocity-based system and eats wave-land momentum.
             var physicsMat = new PhysicsMaterial2D("PlayerMaterial");
-            physicsMat.friction = 0.4f;
+            physicsMat.friction = 0f;
             physicsMat.bounciness = 0f;
             Rb.sharedMaterial = physicsMat;
         }
@@ -52,62 +50,18 @@ public class PlayerController : MonoBehaviour
     // Horizontal Movement
     // =========================================================
 
+    /// <summary>
+    /// Frame-rate-independent horizontal movement using MoveTowards.
+    /// The old formula (speedDiff * rate * dt) reached max speed in 1 frame
+    /// because rate * dt = 50 * 0.02 = 1.0, making it instant convergence.
+    /// MoveTowards gives predictable, linear acceleration ramps.
+    /// </summary>
     public void MoveHorizontal(float input, float accel, float decel)
     {
         float targetSpeed = input * currentMaxSpeed;
-        float speedDiff = targetSpeed - Rb.linearVelocity.x;
         float rate = Mathf.Abs(targetSpeed) > 0.01f ? accel : decel;
-        float movement = speedDiff * rate * Time.fixedDeltaTime;
-        Rb.linearVelocity += new Vector2(movement, 0f);
-    }
-
-    /// <summary>
-    /// Move along the slope surface direction instead of pure horizontal.
-    /// This prevents the player from fighting gravity on slopes.
-    /// </summary>
-    public void MoveOnSlope(float input, float accel, float decel, Vector2 groundNormal)
-    {
-        // Get the direction along the slope surface
-        // Perpendicular to the normal, pointing right = (normal.y, -normal.x)
-        Vector2 slopeDir = new Vector2(groundNormal.y, -groundNormal.x);
-
-        // Project current velocity onto slope direction to get current slope speed
-        float currentSlopeSpeed = Vector2.Dot(Rb.linearVelocity, slopeDir);
-
-        float targetSpeed = input * currentMaxSpeed;
-        float speedDiff = targetSpeed - currentSlopeSpeed;
-        float rate = Mathf.Abs(targetSpeed) > 0.01f ? accel : decel;
-        float movement = speedDiff * rate * Time.fixedDeltaTime;
-
-        // Apply movement along the slope direction
-        Rb.linearVelocity += slopeDir * movement;
-    }
-
-    // =========================================================
-    // Slope Anti-Slide
-    // =========================================================
-
-    /// <summary>
-    /// Counteract gravity pulling the player down slopes when standing still or moving.
-    /// Call every FixedUpdate while grounded on a slope.
-    /// </summary>
-    public void CounterSlopeGravity(Vector2 groundNormal)
-    {
-        // Calculate the gravity force component along the slope
-        Vector2 gravity = UnityEngine.Physics2D.gravity * Rb.gravityScale;
-        Vector2 slopeDir = new Vector2(groundNormal.y, -groundNormal.x);
-
-        // Project gravity onto slope direction — this is the force pulling the player downhill
-        float gravityAlongSlope = Vector2.Dot(gravity, slopeDir);
-
-        // Apply an equal and opposite force to cancel the slide
-        Rb.linearVelocity -= slopeDir * gravityAlongSlope * Time.fixedDeltaTime;
-
-        // Also clamp tiny vertical velocity to prevent jittering on slopes
-        if (Mathf.Abs(Rb.linearVelocity.y) < 0.5f && Mathf.Abs(Rb.linearVelocity.x) < 0.5f)
-        {
-            Rb.linearVelocity = new Vector2(Rb.linearVelocity.x, Mathf.Min(Rb.linearVelocity.y, 0f));
-        }
+        float newSpeedX = Mathf.MoveTowards(Rb.linearVelocity.x, targetSpeed, rate * Time.fixedDeltaTime);
+        Rb.linearVelocity = new Vector2(newSpeedX, Rb.linearVelocity.y);
     }
 
     // =========================================================
@@ -115,7 +69,10 @@ public class PlayerController : MonoBehaviour
     // =========================================================
 
     /// <summary>
-    /// Call from GroundedState each FixedUpdate to handle dash burst logic.
+    /// Call from GroundedState each FixedUpdate.
+    /// Gives an instant speed boost when starting from standstill or reversing.
+    /// With the fixed MoveTowards acceleration, this actually feels distinct now —
+    /// the player briefly overshoots normal max speed then decays back.
     /// </summary>
     public void UpdateDashBurst(float input)
     {
@@ -154,64 +111,38 @@ public class PlayerController : MonoBehaviour
     // =========================================================
 
     /// <summary>
-    /// Start a wave-land: boost speed along the surface and begin sliding.
-    /// Call on landing when crouch is held and player has momentum.
-    /// Uses pre-landing velocity (captured before collision ate the speed).
+    /// Start a wave-land: convert pre-landing momentum into a horizontal slide.
+    /// Uses velocity captured before collision resolution ate the speed.
+    /// Simplified from the old version — removed slope direction detection
+    /// that was causing confusion and edge cases.
     /// </summary>
     public void StartWaveLand(Vector2 preLandingVelocity)
     {
-        // Use the pre-landing velocity since collision resolution has already
-        // killed most of the velocity by the time we enter GroundedState
-        float totalSpeed = preLandingVelocity.magnitude;
         float absHorizontal = Mathf.Abs(preLandingVelocity.x);
+        float totalSpeed = preLandingVelocity.magnitude;
 
-        // Need SOME momentum to trigger
-        bool hasHorizontalMomentum = absHorizontal >= Data.waveLandMinSpeed;
-        bool hasTotalMomentum = totalSpeed >= Data.waveLandMinSpeed;
-
-        if (!hasHorizontalMomentum && !hasTotalMomentum)
-        {
-            Debug.Log($"WaveLand: REJECTED — speed too low (horizontal={absHorizontal:F1}, total={totalSpeed:F1}, min={Data.waveLandMinSpeed})");
+        // Need some momentum to trigger
+        if (absHorizontal < Data.waveLandMinSpeed && totalSpeed < Data.waveLandMinSpeed)
             return;
-        }
+
+        // Need a horizontal direction to slide in
+        if (absHorizontal < 0.5f)
+            return;
 
         IsWaveLanding = true;
-
-        // Determine slide direction from horizontal velocity or slope
-        if (absHorizontal > 0.5f)
-        {
-            waveLandDirection = Mathf.Sign(preLandingVelocity.x);
-        }
-        else
-        {
-            // Falling mostly straight down — slide in the direction of input, or downhill on slopes
-            if (physics != null && physics.IsOnSlope && physics.GroundNormal != Vector2.zero)
-            {
-                Vector2 slopeDir = new Vector2(physics.GroundNormal.y, -physics.GroundNormal.x);
-                waveLandDirection = Mathf.Sign(-slopeDir.x); // Downhill direction
-            }
-            else
-            {
-                // Not on slope and no horizontal velocity — need at least a direction
-                // Can't slide without a direction, so reject
-                IsWaveLanding = false;
-                return;
-            }
-        }
+        waveLandDirection = Mathf.Sign(preLandingVelocity.x);
 
         // Convert total pre-landing momentum into horizontal slide speed
         float boostedSpeed = totalSpeed * Data.waveLandSpeedBoost * waveLandDirection;
         Rb.linearVelocity = new Vector2(boostedSpeed, 0f);
 
-        // Set max speed higher so MoveHorizontal doesn't clamp the slide
+        // Let the slide exceed normal max speed
         currentMaxSpeed = Mathf.Abs(boostedSpeed);
-
-        Debug.Log($"WaveLand: STARTED — preLandVel=({preLandingVelocity.x:F1},{preLandingVelocity.y:F1}), totalSpeed={totalSpeed:F1}, boosted={boostedSpeed:F1}");
     }
 
     /// <summary>
     /// Apply wave-land friction. Call every FixedUpdate during a wave-land.
-    /// Returns true if the slide is still active, false if it has ended.
+    /// Returns true if the slide is still active, false if it ended.
     /// </summary>
     public bool UpdateWaveLand(float input)
     {
@@ -275,12 +206,44 @@ public class PlayerController : MonoBehaviour
     // Gravity
     // =========================================================
 
-    public void ApplyFallGravity()
+    /// <summary>
+    /// Three-zone gravity system inspired by Celeste:
+    ///   1. Falling (vy &lt; 0): heavier gravity → snappy descent
+    ///   2. Peak of jump (vy near 0, holding jump): lighter gravity → hang time
+    ///   3. Rising with jump released: heavier gravity → variable jump height
+    ///   4. Rising with jump held: normal gravity
+    ///
+    /// The old system only had fall vs. normal — no peak zone, no variable height
+    /// via gravity (only via velocity cut). This gives much better jump arcs.
+    /// </summary>
+    public void ApplyFallGravity(bool jumpHeld)
     {
-        if (Rb.linearVelocity.y < 0f)
+        float vy = Rb.linearVelocity.y;
+
+        if (vy < 0f)
+        {
+            // Falling — heavier gravity for snappy landing
             Rb.gravityScale = Data.gravityScale * Data.fallGravityMultiplier;
+        }
+        else if (vy < Data.peakVelocityThreshold && vy >= 0f)
+        {
+            // Peak of jump — reduced gravity for hang time
+            // Only applies if still holding jump; if released, fall fast
+            if (jumpHeld)
+                Rb.gravityScale = Data.gravityScale * Data.peakGravityMultiplier;
+            else
+                Rb.gravityScale = Data.gravityScale * Data.fallGravityMultiplier;
+        }
+        else if (vy > 0f && !jumpHeld)
+        {
+            // Rising but jump released — heavier gravity for variable height
+            Rb.gravityScale = Data.gravityScale * Data.fallGravityMultiplier;
+        }
         else
+        {
+            // Rising with jump held — normal gravity
             Rb.gravityScale = Data.gravityScale;
+        }
     }
 
     public void CutJumpVelocity()

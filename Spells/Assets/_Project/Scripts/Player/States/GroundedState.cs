@@ -5,7 +5,7 @@ public class GroundedState : IPlayerState
     private PlayerStateMachine ctx;
 
     // Grace period: allow wave-land to trigger within a few frames of landing
-    // This handles timing issues where CrouchHeld might update 1 frame late
+    // Handles timing issues where CrouchHeld might update 1 frame late
     private float waveLandGraceTimer;
     private const float WAVE_LAND_GRACE = 0.1f; // 100ms window after landing
 
@@ -71,38 +71,26 @@ public class GroundedState : IPlayerState
     public void FixedExecute()
     {
         float input = ctx.Input.MoveInput.x;
-        bool onSlope = ctx.Physics.IsOnSlope;
-        Vector2 groundNormal = ctx.Physics.GroundNormal;
-
-        // Counteract gravity on slopes to prevent sliding when standing still
-        if (onSlope)
-        {
-            ctx.Controller.CounterSlopeGravity(groundNormal);
-        }
 
         // Wave-land slide takes priority over normal movement
         if (ctx.Controller.UpdateWaveLand(input))
-        {
-            // During wave-land on a slope, also counter gravity so player doesn't
-            // decelerate going uphill or accelerate going downhill unnaturally
-            if (onSlope)
-            {
-                ctx.Controller.CounterSlopeGravity(groundNormal);
-            }
             return;
-        }
 
-        // Normal ground movement
+        // Dash burst + normal ground movement
         ctx.Controller.UpdateDashBurst(input);
+        ctx.Controller.MoveHorizontal(input, ctx.Controller.Data.acceleration, ctx.Controller.Data.deceleration);
 
-        if (onSlope)
+        // Simple slope anti-slide: when standing still on a slope with zero friction,
+        // gravity would pull the player downhill. Instead of the old complex
+        // CounterSlopeGravity system (which fought the velocity code), just zero
+        // velocity when idle on slopes. Clean and reliable.
+        if (Mathf.Abs(input) < 0.1f && ctx.Physics.IsOnSlope)
         {
-            // Move along the slope surface instead of pure horizontal
-            ctx.Controller.MoveOnSlope(input, ctx.Controller.Data.acceleration, ctx.Controller.Data.deceleration, groundNormal);
-        }
-        else
-        {
-            ctx.Controller.MoveHorizontal(input, ctx.Controller.Data.acceleration, ctx.Controller.Data.deceleration);
+            Vector2 vel = ctx.Controller.Rb.linearVelocity;
+            if (vel.magnitude < 1.5f)
+            {
+                ctx.Controller.Rb.linearVelocity = Vector2.zero;
+            }
         }
     }
 

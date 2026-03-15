@@ -1,0 +1,99 @@
+{
+  "scanned_at": "2026-03-15T18:47:35.949381",
+  "file_count": 16,
+  "conventions": {
+    "naming": {
+      "classes": "PascalCase",
+      "interfaces": "I-prefix",
+      "files": "one-class-per-file",
+      "namespaces": "none"
+    },
+    "scriptable_objects": {
+      "count": 2,
+      "common_attributes": [
+        "CreateAssetMenu"
+      ],
+      "field_attributes": [
+        "Header",
+        "Tooltip",
+        "Range"
+      ],
+      "has_clone": true
+    },
+    "mono_behaviours": {
+      "count": 8,
+      "common_attributes": []
+    }
+  },
+  "interfaces": {
+    "IInputProvider": {
+      "methods": [
+        "void ConsumeJump()"
+      ],
+      "file": "Spells/Assets/_Project/Scripts/Player/IInputProvider.cs",
+      "implementors": [
+        {
+          "name": "PlayerInputHandler",
+          "file": "Spells/Assets/_Project/Scripts/Player/PlayerInputHandler.cs"
+        }
+      ]
+    },
+    "IPlayerState": {
+      "methods": [
+        "void Enter(PlayerStateMachine ctx)",
+        "void Execute()",
+        "void FixedExecute()",
+        "void Exit()"
+      ],
+      "file": "Spells/Assets/_Project/Scripts/Player/States/IPlayerState.cs",
+      "implementors": [
+        {
+          "name": "WallSlidingState",
+          "file": "Spells/Assets/_Project/Scripts/Player/States/WallSlidingState.cs"
+        },
+        {
+          "name": "AirborneState",
+          "file": "Spells/Assets/_Project/Scripts/Player/States/AirborneState.cs"
+        },
+        {
+          "name": "GroundedState",
+          "file": "Spells/Assets/_Project/Scripts/Player/States/GroundedState.cs"
+        }
+      ]
+    }
+  },
+  "templates": {
+    "player_state": {
+      "interface": "IPlayerState",
+      "directory": "Spells/Assets/_Project/Scripts/Player/States",
+      "naming": "{Name}State",
+      "example_implementor": "WallSlidingState"
+    },
+    "data_asset": {
+      "base_class": "ScriptableObject",
+      "directory": "Spells/Assets/_Project/Scripts/Data",
+      "naming": "{Name}Data",
+      "attributes": [
+        "CreateAssetMenu"
+      ],
+      "field_style": "[Header] [Tooltip] [Range] public type name = default;"
+    },
+    "component": {
+      "base_class": "MonoBehaviour",
+      "naming": "{Name}",
+      "init_pattern": "GetComponent<> in Awake/Start with null checks"
+    }
+  },
+  "directory_structure": {
+    "script_directories": [
+      "Spells/Assets/TutorialInfo/Scripts",
+      "Spells/Assets/TutorialInfo/Scripts/Editor",
+      "Spells/Assets/_Project/Scripts/Camera",
+      "Spells/Assets/_Project/Scripts/Core",
+      "Spells/Assets/_Project/Scripts/Data",
+      "Spells/Assets/_Project/Scripts/Player",
+      "Spells/Assets/_Project/Scripts/Player/States",
+      "Spells/Assets/_Project/Scripts/Utilities"
+    ]
+  }
+}

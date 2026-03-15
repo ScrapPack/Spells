@@ -83,8 +83,7 @@ public class AirborneState : IPlayerState
             ctx.Controller.MoveHorizontal(input, ctx.Controller.Data.airAcceleration, ctx.Controller.Data.airDeceleration);
         }
 
-        // Three-zone gravity system: fall / peak / rising
-        // Now takes jumpHeld so the peak zone and variable height work correctly
+        // Three-zone gravity system: fall (heavy) / peak (light, hold=hang) / rising (variable)
         ctx.Controller.ApplyFallGravity(ctx.Input.JumpHeld);
         ctx.Controller.ClampFallSpeed();
     }

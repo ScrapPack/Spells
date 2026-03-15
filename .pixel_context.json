@@ -1,0 +1,195 @@
+{
+  "name": "spells",
+  "path": "/Users/brittonwerdell/Desktop/Spells",
+  "project_root": "/Users/brittonwerdell/Desktop/Spells/Spells",
+  "type": {
+    "type": "unity",
+    "language": "C#",
+    "framework": "Unity",
+    "unity_project_subdir": "Spells"
+  },
+  "description": "4-player party arena brawler with power cards. MVP: 2 classes (Wizard+Warrior), 1 arena, core movement, basic projectile, parry, 8 cards. Camera zoom round timer. Damage over time with boundary.",
+  "created": "2026-03-15T18:21:24",
+  "updated": "2026-03-15T19:04:30",
+  "git": {
+    "branch": "main",
+    "recent_commits": [
+      "832dadf Initial commit: core movement system with slope physics"
+    ],
+    "remote": "https://github.com/ScrapPack/Spells.git"
+  },
+  "structure": {
+    "total_files": 115,
+    "by_extension": {
+      ".meta": 57,
+      ".asset": 32,
+      ".cs": 16,
+      ".json": 2,
+      ".inputactions": 2,
+      ".txt": 1,
+      ".unity": 1,
+      ".prefab": 1,
+      ".wlt": 1,
+      ".png": 1
+    },
+    "key_dirs": [
+      "Assets/_Project/Scripts/Core",
+      "Assets/_Project/Scripts/Camera",
+      "Assets/_Project/Scripts/Utilities",
+      "Assets/_Project/Scripts/Data",
+      "Assets/_Project/Scripts/Player",
+      "Assets/_Project/Scripts/Player/States",
+      "Assets/TutorialInfo/Scripts",
+      "Assets/TutorialInfo/Scripts/Editor"
+    ],
+    "source_files": [
+      "Assets/_Project/Scripts/Core/TestArenaBuilder.cs",
+      "Assets/_Project/Scripts/Core/PlayerSpawnManager.cs",
+      "Assets/_Project/Scripts/Camera/MultiTargetCamera.cs",
+      "Assets/_Project/Scripts/Utilities/DebugOverlay.cs",
+      "Assets/_Project/Scripts/Utilities/PhysicsCheck.cs",
+      "Assets/_Project/Scripts/Data/MovementData.cs",
+      "Assets/_Project/Scripts/Player/PlayerController.cs",
+      "Assets/_Project/Scripts/Player/PlayerStateMachine.cs",
+      "Assets/_Project/Scripts/Player/IInputProvider.cs",
+      "Assets/_Project/Scripts/Player/PlayerInputHandler.cs",
+      "Assets/_Project/Scripts/Player/States/IPlayerState.cs",
+      "Assets/_Project/Scripts/Player/States/WallSlidingState.cs",
+      "Assets/_Project/Scripts/Player/States/AirborneState.cs",
+      "Assets/_Project/Scripts/Player/States/GroundedState.cs",
+      "Assets/TutorialInfo/Scripts/Readme.cs",
+      "Assets/TutorialInfo/Scripts/Editor/ReadmeEditor.cs"
+    ]
+  },
+  "files": {
+    "PlayerController.cs": {
+      "purpose": "Core movement physics \u2014 MoveHorizontal, gravity, jump, wave-land, wall slide, dash burst",
+      "annotated": "2026-03-15T18:21:51",
+      "modified_by_pixel": "2026-03-15T18:21:51"
+    },
+    "MovementData.cs": {
+      "purpose": "ScriptableObject with all tunable movement parameters",
+      "annotated": "2026-03-15T18:21:51",
+      "modified_by_pixel": "2026-03-15T18:21:51"
+    },
+    "PlayerStateMachine.cs": {
+      "purpose": "State machine \u2014 manages GroundedState, AirborneState, WallSlidingState. Shared timers.",
+      "annotated": "2026-03-15T18:21:51"
+    },
+    "GroundedState.cs": {
+      "purpose": "Ground movement, jump, wave-land grace timer, simple slope anti-slide",
+      "annotated": "2026-03-15T18:21:51",
+      "modified_by_pixel": "2026-03-15T18:21:51"
+    },
+    "AirborneState.cs": {
+      "purpose": "Air control, variable jump height, coyote time, wall slide entry, 3-zone gravity",
+      "annotated": "2026-03-15T18:21:51",
+      "modified_by_pixel": "2026-03-15T18:21:51"
+    },
+    "WallSlidingState.cs": {
+      "purpose": "Wall slide with accelerating fall speed, gravity reduction",
+      "annotated": "2026-03-15T18:21:51"
+    },
+    "PhysicsCheck.cs": {
+      "purpose": "Ground/wall/ceiling detection, slope detection, layer auto-detection",
+      "annotated": "2026-03-15T18:21:51"
+    },
+    "PlayerInputHandler.cs": {
+      "purpose": "Unity Input System bridge \u2014 implements IInputProvider",
+      "annotated": "2026-03-15T18:21:51"
+    },
+    "MultiTargetCamera.cs": {
+      "purpose": "Orthographic camera framing all players",
+      "annotated": "2026-03-15T18:21:51"
+    },
+    "TestArenaBuilder.cs": {
+      "purpose": "Procedural test arena \u2014 ramps, bowl pit, pillars, platforms",
+      "annotated": "2026-03-15T18:21:51"
+    },
+    "GDD.md": {
+      "purpose": "Full game design document (525 lines)",
+      "annotated": "2026-03-15T18:21:51"
+    }
+  },
+  "decisions": [
+    {
+      "id": 1,
+      "text": "Switched from speedDiff*rate acceleration to Mathf.MoveTowards \u2014 old formula reached max speed in 1 frame",
+      "timestamp": "2026-03-15T18:22:03"
+    },
+    {
+      "id": 2,
+      "text": "Zeroed physics material friction \u2014 all movement is code-controlled",
+      "timestamp": "2026-03-15T18:22:03"
+    },
+    {
+      "id": 3,
+      "text": "Removed MoveOnSlope and CounterSlopeGravity \u2014 replaced with simple anti-slide (zero velocity when idle on slope)",
+      "timestamp": "2026-03-15T18:22:03"
+    },
+    {
+      "id": 4,
+      "text": "Added 3-zone gravity: fall (2.5x), peak-of-jump (0.4x with jump held), rising-no-jump (2.5x)",
+      "timestamp": "2026-03-15T18:22:03"
+    },
+    {
+      "id": 5,
+      "text": "Lowered jumpForce 16\u219214, fallGravityMultiplier 1.5\u21922.5, maxFallSpeed 25\u219220",
+      "timestamp": "2026-03-15T18:22:03"
+    },
+    {
+      "id": 6,
+      "text": "Increased waveLandFriction 6\u219230 to compensate for zero physics friction",
+      "timestamp": "2026-03-15T18:22:03"
+    },
+    {
+      "id": 7,
+      "text": "Jump tuning recommendation: jumpForce 12 (apex ~2.45u) addresses 'jumps too high' feedback. With peak gravity 0.4x + coyote 0.12s + jump buffer 0.12s, the jump should feel responsive but not floaty. Alternative: jumpForce 11 (apex ~2.05u) if 12 still feels too high.",
+      "timestamp": "2026-03-15T18:28:55"
+    }
+  ],
+  "pending": [
+    {
+      "id": 1,
+      "text": "Test movement physics changes \u2014 validate compilation and in-game feel",
+      "added": "2026-03-15T18:22:12",
+      "resolved": null
+    },
+    {
+      "id": 2,
+      "text": "Tune jump arc \u2014 Britton says jumps may still be too high",
+      "added": "2026-03-15T18:22:12",
+      "resolved": null
+    },
+    {
+      "id": 3,
+      "text": "Verify wave-land works with zero friction",
+      "added": "2026-03-15T18:22:12",
+      "resolved": null
+    },
+    {
+      "id": 4,
+      "text": "Implement parry system (next after movement is solid)",
+      "added": "2026-03-15T18:22:12",
+      "resolved": null
+    }
+  ],
+  "notes": [
+    {
+      "text": "Britton wants basic platform fighter feel \u2014 Melee, Celeste, Mario references. Fluid and immediately graspable.",
+      "timestamp": "2026-03-15T18:22:12"
+    },
+    {
+      "text": "Unity 6000.3.11f1 installed on this Mac \u2014 can compile and test here, not just Windows.",
+      "timestamp": "2026-03-15T18:22:12"
+    },
+    {
+      "text": "Jump arc analysis: jumpForce 14\u219212 lowers apex from ~3.3 to ~2.45 units. Formula: h=v\u00b2/(2g) where g=gravityScale*9.81=29.43. Closer to Smash Bros full-hop height (~2x character). Suggested change \u2014 needs playtesting. Peak gravity (0.4x) extends hang time at apex, so effective perceived height is slightly higher than raw calculation.",
+      "timestamp": "2026-03-15T18:28:52"
+    },
+    {
+      "text": "External work tools complete (2026-03-15): project_context, code_validate, change_tracker, code_patterns, test_harness, refactor_tool all tested on Spells. 7 EditMode tests passing. Spells.asmdef created. Ready for real game development work.",
+      "timestamp": "2026-03-15T19:04:30"
+    }
+  ]
+}

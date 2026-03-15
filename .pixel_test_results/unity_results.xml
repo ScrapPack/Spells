@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Passed" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.0311152">
+  <test-suite type="TestSuite" id="1000" name="Spells" fullname="Spells" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.031115" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1009" name="EditModeTests.dll" fullname="/Users/brittonwerdell/Desktop/Spells/Spells/Library/ScriptAssemblies/EditModeTests.dll" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.026754" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="14550" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestFixture" id="1001" name="MovementDataTests" fullname="MovementDataTests" classname="MovementDataTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.025145" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1008" name="Clone_CreatesIndependentCopy" fullname="MovementDataTests.Clone_CreatesIndependentCopy" methodname="Clone_CreatesIndependentCopy" classname="MovementDataTests" runstate="Runnable" seed="1948280587" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.008921" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1006" name="CoyoteTime_WithinAcceptableRange" fullname="MovementDataTests.CoyoteTime_WithinAcceptableRange" methodname="CoyoteTime_WithinAcceptableRange" classname="MovementDataTests" runstate="Runnable" seed="166021896" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.001546" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1002" name="DefaultJumpForce_GivesReasonableApexHeight" fullname="MovementDataTests.DefaultJumpForce_GivesReasonableApexHeight" methodname="DefaultJumpForce_GivesReasonableApexHeight" classname="MovementDataTests" runstate="Runnable" seed="971566051" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.000537" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1003" name="FallGravityMultiplier_GreaterThanOne" fullname="MovementDataTests.FallGravityMultiplier_GreaterThanOne" methodname="FallGravityMultiplier_GreaterThanOne" classname="MovementDataTests" runstate="Runnable" seed="1424559972" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.000503" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1005" name="MaxFallSpeed_CapsTerminalVelocity" fullname="MovementDataTests.MaxFallSpeed_CapsTerminalVelocity" methodname="MaxFallSpeed_CapsTerminalVelocity" classname="MovementDataTests" runstate="Runnable" seed="1795331090" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.000285" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1004" name="PeakGravityMultiplier_LessThanOne" fullname="MovementDataTests.PeakGravityMultiplier_LessThanOne" methodname="PeakGravityMultiplier_LessThanOne" classname="MovementDataTests" runstate="Runnable" seed="1007253960" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.000822" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1007" name="WaveLandSpeedBoost_IsPositiveMultiplier" fullname="MovementDataTests.WaveLandSpeedBoost_IsPositiveMultiplier" methodname="WaveLandSpeedBoost_IsPositiveMultiplier" classname="MovementDataTests" runstate="Runnable" seed="25014148" result="Passed" start-time="2026-03-15 22:58:39Z" end-time="2026-03-15 22:58:39Z" duration="0.000494" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[Saving results to: /Users/brittonwerdell/Library/Application Support/DefaultCompany/Spells/TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

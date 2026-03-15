@@ -26,8 +26,8 @@ public class MovementData : ScriptableObject
     [Range(5f, 300f)] public float airDeceleration = 50f;
 
     [Header("Jump")]
-    [Tooltip("Initial jump velocity. With gravityScale 3, jumpForce 14 gives ~3.3 unit apex height.")]
-    [Range(5f, 30f)] public float jumpForce = 14f;
+    [Tooltip("Initial jump velocity. With gravityScale 3, jumpForce 12 gives ~2.45 unit apex height.")]
+    [Range(5f, 30f)] public float jumpForce = 12f;
     [Tooltip("Velocity multiplier when releasing jump early (lower = more variable height control)")]
     [Range(0f, 1f)] public float jumpCutMultiplier = 0.4f;
     [Tooltip("Time after leaving ground where jump still works")]

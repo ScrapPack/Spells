@@ -1,0 +1,46 @@
+{
+  "runner": "unity",
+  "timestamp": "2026-03-15T18:58:54.689659",
+  "total": 7,
+  "passed": 7,
+  "failed": 0,
+  "skipped": 0,
+  "duration": 0.0311152,
+  "tests": [
+    {
+      "name": "MovementDataTests.Clone_CreatesIndependentCopy",
+      "result": "Passed",
+      "duration": 0.008921
+    },
+    {
+      "name": "MovementDataTests.CoyoteTime_WithinAcceptableRange",
+      "result": "Passed",
+      "duration": 0.001546
+    },
+    {
+      "name": "MovementDataTests.DefaultJumpForce_GivesReasonableApexHeight",
+      "result": "Passed",
+      "duration": 0.000537
+    },
+    {
+      "name": "MovementDataTests.FallGravityMultiplier_GreaterThanOne",
+      "result": "Passed",
+      "duration": 0.000503
+    },
+    {
+      "name": "MovementDataTests.MaxFallSpeed_CapsTerminalVelocity",
+      "result": "Passed",
+      "duration": 0.000285
+    },
+    {
+      "name": "MovementDataTests.PeakGravityMultiplier_LessThanOne",
+      "result": "Passed",
+      "duration": 0.000822
+    },
+    {
+      "name": "MovementDataTests.WaveLandSpeedBoost_IsPositiveMultiplier",
+      "result": "Passed",
+      "duration": 0.000494
+    }
+  ]
+}
