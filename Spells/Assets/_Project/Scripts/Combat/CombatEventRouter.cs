@@ -12,6 +12,7 @@ public class CombatEventRouter : MonoBehaviour
     private ParrySystem parry;
     private PlayerIdentity identity;
     private PlayerStateMachine stateMachine;
+    private CombatAnalytics analytics;
 
     private void Start()
     {
@@ -19,6 +20,7 @@ public class CombatEventRouter : MonoBehaviour
         parry = GetComponent<ParrySystem>();
         identity = GetComponent<PlayerIdentity>();
         stateMachine = GetComponent<PlayerStateMachine>();
+        analytics = Object.FindAnyObjectByType<CombatAnalytics>();
 
         if (health != null)
         {
@@ -29,6 +31,7 @@ public class CombatEventRouter : MonoBehaviour
         if (parry != null)
         {
             parry.OnParrySuccess.AddListener(OnParrySuccess);
+            parry.OnParryWhiff.AddListener(OnParryWhiff);
         }
     }
 
@@ -41,6 +44,14 @@ public class CombatEventRouter : MonoBehaviour
         // Screen shake on damage
         if (ScreenShake.Instance != null)
             ScreenShake.Instance.ShakeOnHit();
+
+        // Analytics
+        if (analytics != null && identity != null)
+        {
+            analytics.RecordDamageReceived(identity.PlayerID, amount);
+            if (health.LastAttackerID >= 0)
+                analytics.RecordDamageDealt(health.LastAttackerID, amount);
+        }
     }
 
     private void OnDied()
@@ -80,6 +91,14 @@ public class CombatEventRouter : MonoBehaviour
 
             killFeed.AddElimination(victimName, killerName, killerColor);
         }
+
+        // Analytics: record death and kill credit
+        if (analytics != null && identity != null)
+        {
+            analytics.RecordDeath(identity.PlayerID);
+            if (health.LastAttackerID >= 0)
+                analytics.RecordKill(health.LastAttackerID);
+        }
     }
 
     private void OnParrySuccess()
@@ -89,6 +108,17 @@ public class CombatEventRouter : MonoBehaviour
             Hitstop.Instance.StopOnParry();
         if (ScreenShake.Instance != null)
             ScreenShake.Instance.ShakeOnParry();
+
+        // Analytics
+        if (analytics != null && identity != null)
+            analytics.RecordParrySuccess(identity.PlayerID);
+    }
+
+    private void OnParryWhiff()
+    {
+        // Analytics
+        if (analytics != null && identity != null)
+            analytics.RecordParryFail(identity.PlayerID);
     }
 
     private void OnDestroy()
@@ -101,6 +131,7 @@ public class CombatEventRouter : MonoBehaviour
         if (parry != null)
         {
             parry.OnParrySuccess.RemoveListener(OnParrySuccess);
+            parry.OnParryWhiff.RemoveListener(OnParryWhiff);
         }
     }
 }

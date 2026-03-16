@@ -36,6 +36,7 @@ public class DestructibleObject : MonoBehaviour
     private int currentHP;
     private SpriteRenderer spriteRenderer;
     private Collider2D col;
+    private int lastAttackerID = -1;
 
     private void Awake()
     {
@@ -78,9 +79,14 @@ public class DestructibleObject : MonoBehaviour
         if (destructionEffectPrefab != null)
             Instantiate(destructionEffectPrefab, transform.position, Quaternion.identity);
 
-        // Spawn hazard
+        // Spawn hazard (with kill credit to whoever destroyed this object)
         if (hazardPrefab != null)
-            Instantiate(hazardPrefab, transform.position, Quaternion.identity);
+        {
+            var hazardObj = Instantiate(hazardPrefab, transform.position, Quaternion.identity);
+            var hazard = hazardObj.GetComponent<EnvironmentHazard>();
+            if (hazard != null && lastAttackerID >= 0)
+                hazard.SetSourcePlayer(lastAttackerID);
+        }
 
         // Disable collider immediately (gameplay), destroy object after delay (visuals)
         if (col != null)
@@ -94,10 +100,11 @@ public class DestructibleObject : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // Projectiles destroy this object
+        // Projectiles destroy this object — track who did it for kill credit
         var projectile = other.GetComponent<Projectile>();
         if (projectile != null)
         {
+            lastAttackerID = projectile.OwnerPlayerID;
             TakeHit(Mathf.RoundToInt(projectile.Damage));
         }
     }
