@@ -213,7 +213,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a2eaea23523e354183369c6e9810e04, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerInputHandler
+  m_EditorClassIdentifier: Spells::PlayerInputHandler
 --- !u!114 &7429035493088425037
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -225,7 +225,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eca830c895ff04746b71032be881731b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PhysicsCheck
+  m_EditorClassIdentifier: Spells::PhysicsCheck
   groundCheckOffset: {x: 0, y: -0.5}
   groundCheckSize: {x: 0.4, y: 0.04}
   groundLayer:
@@ -248,7 +248,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1d064d50341b56f4ba34955f9385e5ba, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  m_EditorClassIdentifier: Spells::PlayerController
   baseMovementData: {fileID: 11400000, guid: 99533952e86712346ba9967388285daf, type: 2}
 --- !u!114 &5826175214802945321
 MonoBehaviour:
@@ -261,7 +261,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05752278478022b468f89392c5083761, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerStateMachine
+  m_EditorClassIdentifier: Spells::PlayerStateMachine
 --- !u!114 &513964304074555544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -273,5 +273,5 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5850472b542d05b44810f40532fc081e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DebugOverlay
+  m_EditorClassIdentifier: Spells::DebugOverlay
   showDebug: 1
