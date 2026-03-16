@@ -20,6 +20,10 @@ public class EnvironmentHazard : MonoBehaviour
     [Tooltip("Direction of knockback (Up = launch upward, Zero = away from center)")]
     [SerializeField] private Vector2 knockbackDirection = Vector2.up;
 
+    [Header("Attribution")]
+    [Tooltip("Player ID who created this hazard (-1 = environment). Used for kill credit.")]
+    [SerializeField] private int sourcePlayerID = -1;
+
     [Header("Lifetime")]
     [Tooltip("Duration in seconds. 0 = permanent.")]
     [SerializeField] private float lifetime = 0f;
@@ -28,6 +32,12 @@ public class EnvironmentHazard : MonoBehaviour
 
     private float lifetimeTimer;
     private SpriteRenderer spriteRenderer;
+
+    /// <summary>
+    /// Set the player who created this hazard (for kill credit).
+    /// Called when a DestructibleObject spawns a hazard from a player's attack.
+    /// </summary>
+    public void SetSourcePlayer(int playerID) => sourcePlayerID = playerID;
 
     // Track damage cooldowns per player
     private readonly System.Collections.Generic.Dictionary<int, float> cooldowns =
@@ -84,8 +94,8 @@ public class EnvironmentHazard : MonoBehaviour
         if (cooldowns.ContainsKey(playerID) && cooldowns[playerID] > 0f)
             return;
 
-        // Apply damage
-        bool didDamage = health.TakeDamage(damage);
+        // Apply damage (with source player for kill credit if applicable)
+        bool didDamage = health.TakeDamage(damage, sourcePlayerID);
 
         if (didDamage)
         {

@@ -106,6 +106,13 @@ public class ProjectileSpawner : MonoBehaviour
             );
         }
 
+        // Apply projectile modifiers (homing, explosive, split, etc.)
+        var modSystem = GetComponent<ProjectileModifierSystem>();
+        if (modSystem != null)
+        {
+            modSystem.ProcessProjectile(projObj);
+        }
+
         // Ammo
         if (usesAmmo)
             CurrentAmmo--;
