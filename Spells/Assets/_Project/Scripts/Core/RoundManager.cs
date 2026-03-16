@@ -14,6 +14,10 @@ public class RoundManager : MonoBehaviour
     [SerializeField] private float zoomDelaySeconds = 30f;
     [Tooltip("Total round time before full compression")]
     [SerializeField] private float maxRoundSeconds = 90f;
+    [Tooltip("If true, round ends in a draw when max time expires")]
+    [SerializeField] private bool enableTimeout = true;
+    [Tooltip("Extra seconds after full zoom before forced round end")]
+    [SerializeField] private float overtimeSeconds = 10f;
 
     [Header("Events")]
     public UnityEvent OnRoundStart;
@@ -83,6 +87,40 @@ public class RoundManager : MonoBehaviour
             float zoomTime = RoundTimer - zoomDelaySeconds;
             float zoomDuration = maxRoundSeconds - zoomDelaySeconds;
             ZoomProgress = Mathf.Clamp01(zoomTime / zoomDuration);
+        }
+
+        // Round timeout: force end after max time + overtime
+        if (enableTimeout && RoundTimer >= maxRoundSeconds + overtimeSeconds)
+        {
+            // Timeout — determine winner by HP
+            int bestPlayer = -1;
+            int bestHP = -1;
+
+            foreach (int pid in alivePlayers)
+            {
+                if (playerHealthSystems.ContainsKey(pid))
+                {
+                    int hp = playerHealthSystems[pid].CurrentHP;
+                    if (hp > bestHP)
+                    {
+                        bestHP = hp;
+                        bestPlayer = pid;
+                    }
+                }
+            }
+
+            // If tied HP, it's a draw (winner = -1)
+            int tiedCount = 0;
+            foreach (int pid in alivePlayers)
+            {
+                if (playerHealthSystems.ContainsKey(pid) && playerHealthSystems[pid].CurrentHP == bestHP)
+                    tiedCount++;
+            }
+
+            if (tiedCount > 1)
+                bestPlayer = -1; // Draw
+
+            EndRound();
         }
     }
 

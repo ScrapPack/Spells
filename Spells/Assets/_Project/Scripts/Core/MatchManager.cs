@@ -22,6 +22,8 @@ public class MatchManager : MonoBehaviour
     [SerializeField] private PlayerSpawnManager spawnManager;
     [SerializeField] private RoundAnnouncer announcer;
     [SerializeField] private KillFeed killFeed;
+    [SerializeField] private CharacterSelectManager charSelect;
+    [SerializeField] private CombatAnalytics analytics;
 
     [Header("Events")]
     public UnityEvent<MatchState> OnStateChanged;
@@ -49,6 +51,11 @@ public class MatchManager : MonoBehaviour
             draftManager.OnDraftComplete.AddListener(OnDraftCompleted);
         }
 
+        if (charSelect != null)
+        {
+            charSelect.OnCharSelectComplete.AddListener(OnCharSelectComplete);
+        }
+
         ChangeState(MatchState.Setup);
     }
 
@@ -73,6 +80,48 @@ public class MatchManager : MonoBehaviour
         // Register with draft manager for class-specific card pools
         if (draftManager != null)
             draftManager.RegisterPlayerObject(playerID, playerObj);
+    }
+
+    /// <summary>
+    /// Begin character selection phase. Called after all players have joined.
+    /// </summary>
+    public void BeginCharacterSelect()
+    {
+        ChangeState(MatchState.CharSelect);
+
+        if (charSelect != null)
+            charSelect.BeginSelection(playerIDs);
+    }
+
+    /// <summary>
+    /// Called when character selection is complete. Applies classes and starts match.
+    /// </summary>
+    private void OnCharSelectComplete()
+    {
+        if (charSelect == null) return;
+
+        // Apply selected classes to all players
+        var selections = charSelect.GetAllSelections();
+        foreach (var kvp in selections)
+        {
+            int playerID = kvp.Key;
+            ClassData classData = kvp.Value;
+
+            // Find the player object
+            foreach (var obj in playerObjects)
+            {
+                var id = obj.GetComponent<PlayerIdentity>();
+                if (id != null && id.PlayerID == playerID)
+                {
+                    var classManager = obj.GetComponent<ClassManager>();
+                    if (classManager != null)
+                        classManager.Initialize(classData, playerID);
+                    break;
+                }
+            }
+        }
+
+        StartMatch();
     }
 
     /// <summary>
@@ -141,6 +190,10 @@ public class MatchManager : MonoBehaviour
         {
             roundWins[winnerID]++;
             OnScoreUpdate?.Invoke(new Dictionary<int, int>(roundWins));
+
+            // Record round win in analytics
+            if (analytics != null)
+                analytics.RecordRoundWin(winnerID);
 
             // Announce round winner
             string winnerName = $"Player {winnerID + 1}";
