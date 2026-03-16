@@ -51,15 +51,34 @@ public class CombatEventRouter : MonoBehaviour
         if (ScreenShake.Instance != null)
             ScreenShake.Instance.ShakeOnKill();
 
-        // Report to kill feed
+        // Report to kill feed with proper kill credit
         var killFeed = Object.FindAnyObjectByType<KillFeed>();
         if (killFeed != null && identity != null)
         {
-            killFeed.AddElimination(
-                $"Player {identity.PlayerID + 1}",
-                null, // TODO: track last attacker for proper kill credit
-                Color.white
-            );
+            string victimName = $"Player {identity.PlayerID + 1}";
+            string killerName = null;
+            Color killerColor = Color.white;
+
+            // Look up killer identity from LastAttackerID
+            if (health.LastAttackerID >= 0)
+            {
+                killerName = $"Player {health.LastAttackerID + 1}";
+
+                // Try to get killer's class color
+                var allPlayers = Object.FindObjectsByType<PlayerIdentity>(FindObjectsSortMode.None);
+                foreach (var pi in allPlayers)
+                {
+                    if (pi.PlayerID == health.LastAttackerID)
+                    {
+                        var cm = pi.GetComponent<ClassManager>();
+                        if (cm != null && cm.CurrentClass != null)
+                            killerColor = cm.CurrentClass.classColor;
+                        break;
+                    }
+                }
+            }
+
+            killFeed.AddElimination(victimName, killerName, killerColor);
         }
     }
 

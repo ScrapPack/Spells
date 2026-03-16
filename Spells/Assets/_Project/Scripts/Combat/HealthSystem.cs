@@ -19,6 +19,12 @@ public class HealthSystem : MonoBehaviour
     public bool IsAlive => CurrentHP > 0;
     public bool IsInvincible { get; private set; }
 
+    /// <summary>
+    /// Player ID of whoever last dealt damage. Used for kill credit.
+    /// -1 means no attacker (environment, self, etc.).
+    /// </summary>
+    public int LastAttackerID { get; private set; } = -1;
+
     private float invincibilityTimer;
     private float invincibilityDuration;
 
@@ -47,12 +53,15 @@ public class HealthSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Apply damage. Respects invincibility frames.
+    /// Apply damage with attacker tracking. Respects invincibility frames.
     /// Returns true if damage was actually applied.
     /// </summary>
-    public bool TakeDamage(float amount)
+    public bool TakeDamage(float amount, int attackerID = -1)
     {
         if (!IsAlive || IsInvincible) return false;
+
+        if (attackerID >= 0)
+            LastAttackerID = attackerID;
 
         int intDamage = Mathf.Max(1, Mathf.RoundToInt(amount));
         CurrentHP = Mathf.Max(0, CurrentHP - intDamage);
@@ -102,6 +111,7 @@ public class HealthSystem : MonoBehaviour
         CurrentHP = MaxHP;
         IsInvincible = false;
         invincibilityTimer = 0f;
+        LastAttackerID = -1;
         OnHealthChanged?.Invoke(CurrentHP, MaxHP);
     }
 

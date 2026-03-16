@@ -170,8 +170,8 @@ public class Projectile : MonoBehaviour
         if (otherID != null && otherID.PlayerID == OwnerPlayerID && !IsReflected)
             return;
 
-        // Apply damage
-        bool didDamage = otherHealth.TakeDamage(Damage);
+        // Apply damage (with attacker ID for kill credit)
+        bool didDamage = otherHealth.TakeDamage(Damage, OwnerPlayerID);
 
         // Apply knockback and hitstun
         if (didDamage)

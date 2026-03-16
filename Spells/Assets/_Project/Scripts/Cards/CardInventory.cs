@@ -75,6 +75,12 @@ public class CardInventory : MonoBehaviour
             }
         }
 
+        // Apply special behavior if card has one
+        if (card.hasSpecialBehavior && SpellEffectRegistry.Instance != null)
+        {
+            SpellEffectRegistry.Instance.ApplyEffect(gameObject, card);
+        }
+
         OnCardAdded?.Invoke(card);
         return true;
     }

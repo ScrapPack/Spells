@@ -102,6 +102,21 @@ public class DraftManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Registered player GameObjects, indexed by player ID.
+    /// Set during InitializeMatch so draft can look up class tags.
+    /// </summary>
+    private readonly Dictionary<int, GameObject> playerObjects = new Dictionary<int, GameObject>();
+
+    /// <summary>
+    /// Register a player object so draft can look up their ClassManager.
+    /// Call after ClassManager.Initialize.
+    /// </summary>
+    public void RegisterPlayerObject(int playerID, GameObject playerObj)
+    {
+        playerObjects[playerID] = playerObj;
+    }
+
+    /// <summary>
     /// Draw card options for a player based on their class and level.
     /// </summary>
     private PowerCardData[] DrawOptions(int playerID)
@@ -109,8 +124,18 @@ public class DraftManager : MonoBehaviour
         if (allCards == null || allCards.Length == 0)
             return new PowerCardData[0];
 
-        // Get player class tags (needs to find the player's ClassManager)
+        // Look up actual class tags from player's ClassManager
         string[] classTags = new string[] { "General" };
+        if (playerObjects.ContainsKey(playerID))
+        {
+            var classManager = playerObjects[playerID].GetComponent<ClassManager>();
+            if (classManager != null && classManager.CurrentClass != null
+                && classManager.CurrentClass.cardPoolTags != null
+                && classManager.CurrentClass.cardPoolTags.Length > 0)
+            {
+                classTags = classManager.CurrentClass.cardPoolTags;
+            }
+        }
         int level = playerLevels.ContainsKey(playerID) ? playerLevels[playerID] : 0;
 
         // Build eligible card pools

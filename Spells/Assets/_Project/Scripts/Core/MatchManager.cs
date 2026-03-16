@@ -20,6 +20,8 @@ public class MatchManager : MonoBehaviour
     [SerializeField] private DraftManager draftManager;
     [SerializeField] private MultiTargetCamera multiCamera;
     [SerializeField] private PlayerSpawnManager spawnManager;
+    [SerializeField] private RoundAnnouncer announcer;
+    [SerializeField] private KillFeed killFeed;
 
     [Header("Events")]
     public UnityEvent<MatchState> OnStateChanged;
@@ -67,6 +69,10 @@ public class MatchManager : MonoBehaviour
         // Register with camera
         if (multiCamera != null)
             multiCamera.AddTarget(playerObj.transform);
+
+        // Register with draft manager for class-specific card pools
+        if (draftManager != null)
+            draftManager.RegisterPlayerObject(playerID, playerObj);
     }
 
     /// <summary>
@@ -95,6 +101,10 @@ public class MatchManager : MonoBehaviour
     {
         CurrentRound++;
         ChangeState(MatchState.RoundStart);
+
+        // Announce round number
+        if (announcer != null)
+            announcer.AnnounceRound(CurrentRound);
 
         // Register alive players with round manager
         if (roundManager != null)
@@ -132,9 +142,20 @@ public class MatchManager : MonoBehaviour
             roundWins[winnerID]++;
             OnScoreUpdate?.Invoke(new Dictionary<int, int>(roundWins));
 
+            // Announce round winner
+            string winnerName = $"Player {winnerID + 1}";
+            Color winnerColor = GetPlayerClassColor(winnerID);
+            if (announcer != null)
+                announcer.AnnounceRoundWin(winnerName, winnerColor);
+            if (killFeed != null)
+                killFeed.AddRoundWin(winnerName, CurrentRound, winnerColor);
+
             // Check for match win
             if (roundWins[winnerID] >= winsToWinMatch)
             {
+                if (announcer != null)
+                    announcer.AnnounceMatchWin(winnerName, winnerColor);
+
                 ChangeState(MatchState.MatchEnd);
                 OnMatchWin?.Invoke(winnerID);
                 return;
@@ -183,5 +204,23 @@ public class MatchManager : MonoBehaviour
     public Dictionary<int, int> GetAllScores()
     {
         return new Dictionary<int, int>(roundWins);
+    }
+
+    /// <summary>
+    /// Get class color for a player. Falls back to white if not found.
+    /// </summary>
+    private Color GetPlayerClassColor(int playerID)
+    {
+        foreach (var obj in playerObjects)
+        {
+            var id = obj.GetComponent<PlayerIdentity>();
+            if (id != null && id.PlayerID == playerID)
+            {
+                var cm = obj.GetComponent<ClassManager>();
+                if (cm != null && cm.CurrentClass != null)
+                    return cm.CurrentClass.classColor;
+            }
+        }
+        return Color.white;
     }
 }
