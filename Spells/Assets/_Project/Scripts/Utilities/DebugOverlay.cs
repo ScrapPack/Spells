@@ -8,6 +8,9 @@ public class DebugOverlay : MonoBehaviour
     private PlayerStateMachine stateMachine;
     private PlayerController controller;
     private PhysicsCheck physicsCheck;
+    private HealthSystem health;
+    private ParrySystem parry;
+    private ProjectileSpawner spawner;
 
     private GUIStyle labelStyle;
     private GUIStyle bgStyle;
@@ -17,6 +20,9 @@ public class DebugOverlay : MonoBehaviour
         stateMachine = GetComponent<PlayerStateMachine>();
         controller = GetComponent<PlayerController>();
         physicsCheck = GetComponent<PhysicsCheck>();
+        health = GetComponent<HealthSystem>();
+        parry = GetComponent<ParrySystem>();
+        spawner = GetComponent<ProjectileSpawner>();
     }
 
     private void Update()
@@ -48,7 +54,7 @@ public class DebugOverlay : MonoBehaviour
         float x = 10 + playerIndex * 220;
         float y = 10;
         float w = 210;
-        float h = 200;
+        float h = 280;
 
         GUI.Box(new Rect(x, y, w, h), "", bgStyle);
 
@@ -85,6 +91,27 @@ public class DebugOverlay : MonoBehaviour
         cy += lineHeight;
 
         GUI.Label(new Rect(cx, cy, w, lineHeight), $"WallLock: {stateMachine.WallJumpLockoutTimer:F3}", labelStyle);
+        cy += lineHeight;
+
+        // Combat info
+        if (health != null)
+        {
+            GUI.Label(new Rect(cx, cy, w, lineHeight), $"HP: {health.CurrentHP}/{health.MaxHP} {(health.IsInvincible ? "[INV]" : "")}", labelStyle);
+            cy += lineHeight;
+        }
+
+        if (parry != null)
+        {
+            string parryState = parry.IsParrying ? "ACTIVE" : parry.IsInRecovery ? "WHIFF" : "Ready";
+            GUI.Label(new Rect(cx, cy, w, lineHeight), $"Parry: {parryState}", labelStyle);
+            cy += lineHeight;
+        }
+
+        if (spawner != null && spawner.HasAmmo)
+        {
+            GUI.Label(new Rect(cx, cy, w, lineHeight), $"Ammo: {spawner.CurrentAmmo}", labelStyle);
+            cy += lineHeight;
+        }
     }
 
     private Texture2D MakeTexture(int width, int height, Color color)

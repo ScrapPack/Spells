@@ -65,7 +65,7 @@ public class AirborneState : IPlayerState
                                   || (ctx.Physics.WallDirection == -1 && inputX < -0.1f);
             if (holdingTowardWall)
             {
-                ctx.ChangeState(ctx.WallSlidingState);
+                ctx.ChangeState(ctx.WallSlideState);
                 return;
             }
         }

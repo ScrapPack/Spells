@@ -11,7 +11,7 @@ public class PlayerStateMachine : MonoBehaviour
     // Pre-allocated states
     public GroundedState GroundedState { get; private set; }
     public AirborneState AirborneState { get; private set; }
-    public WallSlidingState WallSlidingState { get; private set; }
+    public WallSlideState WallSlideState { get; private set; }
 
     // Shared timers accessible by states
     public float JumpBufferTimer { get; set; }
@@ -30,7 +30,7 @@ public class PlayerStateMachine : MonoBehaviour
     {
         GroundedState = new GroundedState();
         AirborneState = new AirborneState();
-        WallSlidingState = new WallSlidingState();
+        WallSlideState = new WallSlideState();
     }
 
     private void Start()

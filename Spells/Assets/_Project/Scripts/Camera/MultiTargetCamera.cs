@@ -13,7 +13,20 @@ public class MultiTargetCamera : MonoBehaviour
     [SerializeField] private float smoothSpeed = 5f;
     [SerializeField] private Vector3 offset = new Vector3(0f, 0f, -10f);
 
+    [Header("Round Zoom")]
+    [Tooltip("Minimum ortho size at full compression (end of round)")]
+    [SerializeField] private float zoomMinSize = 3f;
+
     private Camera cam;
+    private float zoomProgress;
+
+    /// <summary>
+    /// Set by RoundManager. 0 = no zoom, 1 = full compression.
+    /// </summary>
+    public void SetZoomProgress(float progress)
+    {
+        zoomProgress = Mathf.Clamp01(progress);
+    }
 
     private void Awake()
     {
@@ -73,6 +86,9 @@ public class MultiTargetCamera : MonoBehaviour
         float sizeX = (bounds.size.x / 2f + orthographicSizePadding) / cam.aspect;
         float requiredSize = Mathf.Max(sizeY, sizeX);
 
-        return Mathf.Clamp(requiredSize, minOrthographicSize, maxOrthographicSize);
+        // Apply round zoom compression: shrinks the max allowed size over time
+        float currentMax = Mathf.Lerp(maxOrthographicSize, zoomMinSize, zoomProgress);
+        float currentMin = Mathf.Lerp(minOrthographicSize, zoomMinSize, zoomProgress);
+        return Mathf.Clamp(requiredSize, currentMin, currentMax);
     }
 }

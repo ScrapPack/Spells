@@ -14,9 +14,25 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
     public bool JumpHeld { get; private set; }
     public bool CrouchHeld { get; private set; }
 
+    // Combat inputs
+    public bool ShootPressed { get; private set; }
+    public bool ShootHeld { get; private set; }
+    public bool ParryPressed { get; private set; }
+    public Vector2 AimDirection { get; private set; }
+
     public void ConsumeJump()
     {
         JumpPressed = false;
+    }
+
+    public void ConsumeShoot()
+    {
+        ShootPressed = false;
+    }
+
+    public void ConsumeParry()
+    {
+        ParryPressed = false;
     }
 
     // Called by PlayerInput via Send Messages when Move action value changes
@@ -39,6 +55,35 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
         {
             JumpHeld = false;
         }
+    }
+
+    // Called by PlayerInput via Send Messages when Shoot action fires
+    public void OnShoot(InputValue value)
+    {
+        if (value.isPressed)
+        {
+            ShootPressed = true;
+            ShootHeld = true;
+        }
+        else
+        {
+            ShootHeld = false;
+        }
+    }
+
+    // Called by PlayerInput via Send Messages when Parry action fires
+    public void OnParry(InputValue value)
+    {
+        if (value.isPressed)
+        {
+            ParryPressed = true;
+        }
+    }
+
+    // Called by PlayerInput via Send Messages when Aim action changes
+    public void OnAim(InputValue value)
+    {
+        AimDirection = value.Get<Vector2>();
     }
 
     private void Update()
