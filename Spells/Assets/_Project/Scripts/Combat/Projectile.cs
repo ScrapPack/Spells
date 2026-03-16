@@ -15,6 +15,26 @@ public class Projectile : MonoBehaviour
     public float HitstunDuration { get; private set; }
     public bool IsReflected { get; private set; }
 
+    // === Extension points for SpellEffects ===
+
+    /// <summary>Multiplier applied to damage. Modified by Lucky Bounce, Ambush, etc.</summary>
+    public float DamageMultiplier { get; set; } = 1f;
+
+    /// <summary>Current number of wall bounces (for Lucky Bounce damage scaling).</summary>
+    public int CurrentBounceCount => bounceCount;
+
+    /// <summary>When true, projectile won't auto-destroy on lifetime expiry (Magnetic Return).</summary>
+    public bool PreventAutoExpire { get; set; }
+
+    /// <summary>When true, projectile can damage its owner (returning axes).</summary>
+    public bool CanHitOwner { get; set; }
+
+    /// <summary>Called just before dealing damage. Allows modifying DamageMultiplier.</summary>
+    public System.Action<GameObject> OnBeforeHit;
+
+    /// <summary>Called after successfully hitting a player. (target, finalDamage)</summary>
+    public System.Action<GameObject, float> OnHitPlayer;
+
     private Rigidbody2D rb;
     private CircleCollider2D col;
 
@@ -122,7 +142,8 @@ public class Projectile : MonoBehaviour
         lifetimeTimer += Time.deltaTime;
         if (lifetimeTimer >= lifetime)
         {
-            if (retrievable)
+            if (PreventAutoExpire) { /* External component handles expiry */ }
+            else if (retrievable)
                 Land();
             else
                 Destroy(gameObject);
@@ -165,17 +186,24 @@ public class Projectile : MonoBehaviour
         var otherHealth = other.GetComponent<HealthSystem>();
         if (otherHealth == null) return;
 
-        // Check if this is the owner (skip unless reflected)
+        // Check if this is the owner (skip unless reflected or CanHitOwner)
         var otherID = other.GetComponent<PlayerIdentity>();
-        if (otherID != null && otherID.PlayerID == OwnerPlayerID && !IsReflected)
+        if (otherID != null && otherID.PlayerID == OwnerPlayerID && !IsReflected && !CanHitOwner)
             return;
 
-        // Apply damage (with attacker ID for kill credit)
-        bool didDamage = otherHealth.TakeDamage(Damage, OwnerPlayerID);
+        // Pre-hit callback: allows modifying DamageMultiplier (Ambush facing check, etc.)
+        OnBeforeHit?.Invoke(other.gameObject);
+
+        // Apply damage with multiplier
+        float finalDamage = Damage * DamageMultiplier;
+        bool didDamage = otherHealth.TakeDamage(finalDamage, OwnerPlayerID);
 
         // Apply knockback and hitstun
         if (didDamage)
         {
+            // Post-hit callback: poison application, hex marking, etc.
+            OnHitPlayer?.Invoke(other.gameObject, finalDamage);
+
             var otherRb = other.GetComponent<Rigidbody2D>();
             if (otherRb != null)
             {

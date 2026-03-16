@@ -18,7 +18,11 @@ public class ParrySystem : MonoBehaviour
 
     public bool IsParrying { get; private set; }
     public bool IsInRecovery { get; private set; }
-    public bool CanParry => !IsParrying && !IsInRecovery;
+
+    /// <summary>When true, parry input is ignored. Set by Berserker effect at low HP.</summary>
+    public bool ParryDisabled { get; set; }
+
+    public bool CanParry => !IsParrying && !IsInRecovery && !ParryDisabled;
 
     private CombatData combatData;
     private PlayerIdentity identity;

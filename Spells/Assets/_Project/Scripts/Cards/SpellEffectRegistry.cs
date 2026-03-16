@@ -37,13 +37,25 @@ public class SpellEffectRegistry : MonoBehaviour
 
         // Warlock cards
         Register("blood_pact", typeof(BloodPactEffect));
+        Register("soul_siphon", typeof(SoulSiphonEffect));
         Register("lich_form", typeof(LichFormEffect));
 
         // Warrior cards
         Register("heavy_throw", typeof(HeavyThrowEffect));
+        Register("magnetic_return", typeof(MagneticReturnEffect));
+        Register("berserker", typeof(BerserkerEffect));
 
         // Jester cards
         Register("jackpot", typeof(JackpotEffect));
+        Register("lucky_bounce", typeof(LuckyBounceEffect));
+
+        // Witch Doctor cards
+        Register("venom_dart", typeof(VenomDartEffect));
+        Register("hex_mark", typeof(HexMarkEffect));
+
+        // Rogue cards
+        Register("ambush", typeof(AmbushEffect));
+        Register("smoke_bomb", typeof(SmokeBombEffect));
     }
 
     /// <summary>

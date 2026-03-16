@@ -20,6 +20,9 @@ public class ProjectileSpawner : MonoBehaviour
     public int CurrentAmmo { get; private set; }
     public bool HasAmmo => !usesAmmo || CurrentAmmo > 0;
 
+    /// <summary>Reference to the most recently fired projectile (for SpellEffects to modify).</summary>
+    public GameObject LastFiredProjectile { get; private set; }
+
     private CombatData combatData;
     private PlayerIdentity identity;
     private IInputProvider input;
@@ -116,6 +119,9 @@ public class ProjectileSpawner : MonoBehaviour
         {
             modSystem.ProcessProjectile(projObj);
         }
+
+        // Store reference for SpellEffects (Magnetic Return, Venom Dart, etc.)
+        LastFiredProjectile = projObj;
 
         // Ammo
         if (usesAmmo)
