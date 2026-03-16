@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// Handles projectile firing for a player. Reads CombatData for timing and
@@ -12,6 +13,9 @@ public class ProjectileSpawner : MonoBehaviour
     [Header("Aim")]
     [Tooltip("Offset from player center where projectile spawns")]
     [SerializeField] private Vector2 muzzleOffset = new Vector2(0.5f, 0f);
+
+    [Header("Events")]
+    public UnityEvent OnProjectileFired;
 
     public int CurrentAmmo { get; private set; }
     public bool HasAmmo => !usesAmmo || CurrentAmmo > 0;
@@ -124,6 +128,9 @@ public class ProjectileSpawner : MonoBehaviour
         var analytics = Object.FindAnyObjectByType<CombatAnalytics>();
         if (analytics != null && identity != null)
             analytics.RecordProjectileFired(identity.PlayerID);
+
+        // Notify listeners (Blood Pact, etc.)
+        OnProjectileFired?.Invoke();
     }
 
     /// <summary>

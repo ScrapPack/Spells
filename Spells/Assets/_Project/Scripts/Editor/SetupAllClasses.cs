@@ -303,6 +303,49 @@ public class SetupAllClasses : Editor
             true, "smoke_bomb",
             new Color(0.5f, 0.5f, 0.5f), ref totalCreated);
 
+        // ── TIER 2/3 CARDS (Cross-class, game-changing) ──
+
+        // Second Wind: T2, General — double jump, no wall slide
+        CreateCard("SecondWind", "Second Wind",
+            "✦ Double jump (extra air jump)", "✗ Can't wall slide",
+            2, new string[] { "General" }, 3,
+            new StatModifier[] {
+                Mod(StatModifier.Target.MaxAirJumps, StatModifier.ModType.Additive, 1)
+            },
+            new StatModifier[0], // Wall slide disabled by special behavior
+            true, "second_wind",
+            new Color(0.6f, 0.9f, 1f), ref totalCreated);
+
+        // Lich Form: T3, Warlock — revive once per round, -1 max HP
+        CreateCard("LichForm", "Lich Form",
+            "✦ Revive once per round with 1 HP",
+            "✗ Permanent -1 max HP for the rest of the match",
+            3, new string[] { "General", "Warlock" }, 2,
+            new StatModifier[0], // Revive handled by special behavior
+            new StatModifier[] {
+                Mod(StatModifier.Target.MaxHP, StatModifier.ModType.Additive, -1)
+            },
+            true, "lich_form",
+            new Color(0.2f, 0.8f, 0.3f), ref totalCreated);
+
+        // Berserker: T2, Warrior — +1 damage below half HP, can't parry below half HP
+        CreateCard("Berserker", "Berserker",
+            "✦ +1 damage when below half HP",
+            "✗ Can't parry when below half HP",
+            2, new string[] { "General", "Warrior" }, 2,
+            new StatModifier[0], new StatModifier[0],
+            true, "berserker",
+            new Color(0.9f, 0.2f, 0.1f), ref totalCreated);
+
+        // Dark Tether: T2, Warlock — orbs home slightly toward nearest opponent
+        CreateCard("DarkTether", "Dark Tether",
+            "✦ Your orbs home slightly toward nearest opponent",
+            "✗ Your orbs also home slightly toward you on return",
+            2, new string[] { "General", "Warlock" }, 2,
+            new StatModifier[0], new StatModifier[0],
+            true, "dark_tether",
+            new Color(0.3f, 0f, 0.4f), ref totalCreated);
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
@@ -313,8 +356,9 @@ public class SetupAllClasses : Editor
             "• CombatData with GDD-accurate stats\n" +
             "• ClassData with pool tags and colors\n" +
             "• Projectile prefab with correct physics\n" +
-            "• 2 class-specific power cards\n\n" +
-            "Total: 8 classes, 20 cards, 8 projectile prefabs.",
+            "• 2+ class-specific power cards\n\n" +
+            "Plus Tier 2/3 cards: Second Wind, Lich Form, Berserker, Dark Tether\n\n" +
+            "Total: 8 classes, 24 cards, 8 projectile prefabs.",
             "OK");
     }
 

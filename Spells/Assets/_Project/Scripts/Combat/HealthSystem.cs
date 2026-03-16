@@ -114,6 +114,45 @@ public class HealthSystem : MonoBehaviour
     }
 
     /// <summary>
+    /// Revive from death with specified HP. Used by Lich Form and similar effects.
+    /// Only works on dead players (CurrentHP <= 0).
+    /// </summary>
+    public bool Revive(int hp)
+    {
+        if (IsAlive) return false; // Can't revive the living
+
+        CurrentHP = Mathf.Clamp(hp, 1, MaxHP);
+        OnHealthChanged?.Invoke(CurrentHP, MaxHP);
+        OnHealed?.Invoke(CurrentHP);
+
+        // Brief i-frames after revive
+        GrantInvincibility(invincibilityDuration);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Take self-damage (bypasses invincibility). Used by Blood Pact casting cost.
+    /// Returns true if player died from self-damage.
+    /// </summary>
+    public bool TakeSelfDamage(int amount)
+    {
+        if (!IsAlive || amount <= 0) return false;
+
+        CurrentHP = Mathf.Max(0, CurrentHP - amount);
+        OnDamaged?.Invoke(amount);
+        OnHealthChanged?.Invoke(CurrentHP, MaxHP);
+
+        if (CurrentHP <= 0)
+        {
+            OnDeath?.Invoke();
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Reset to full HP for new round.
     /// </summary>
     public void ResetForRound()

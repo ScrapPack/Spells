@@ -30,8 +30,20 @@ public class SpellEffectRegistry : MonoBehaviour
     /// </summary>
     private void RegisterBuiltInEffects()
     {
+        // General cards
         Register("vampiric", typeof(VampiricEffect));
         Register("glass_cannon", typeof(GlassCannonEffect));
+        Register("second_wind", typeof(SecondWindEffect));
+
+        // Warlock cards
+        Register("blood_pact", typeof(BloodPactEffect));
+        Register("lich_form", typeof(LichFormEffect));
+
+        // Warrior cards
+        Register("heavy_throw", typeof(HeavyThrowEffect));
+
+        // Jester cards
+        Register("jackpot", typeof(JackpotEffect));
     }
 
     /// <summary>
