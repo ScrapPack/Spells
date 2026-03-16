@@ -17,6 +17,11 @@ public class PlayerSpawnManager : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private MultiTargetCamera multiTargetCamera;
+    [SerializeField] private MatchManager matchManager;
+
+    [Header("Class Assignment")]
+    [Tooltip("Default class data assigned to joining players (temporary — replaced by character select)")]
+    [SerializeField] private ClassData defaultClassData;
 
     private int playerCount = 0;
     private bool isInitialized = false;
@@ -96,13 +101,28 @@ public class PlayerSpawnManager : MonoBehaviour
             }
         }
 
+        // Initialize combat components
+        var identity = playerInput.GetComponent<PlayerIdentity>();
+        if (identity != null)
+            identity.Initialize(index);
+
+        var classManager = playerInput.GetComponent<ClassManager>();
+        if (classManager != null && defaultClassData != null)
+            classManager.Initialize(defaultClassData, index);
+
         // Register with camera
         if (multiTargetCamera != null)
         {
             multiTargetCamera.AddTarget(playerInput.transform);
         }
 
-        Debug.Log($"Player {index + 1} joined (Device: {playerInput.currentControlScheme})");
+        // Register with match manager
+        if (matchManager != null)
+        {
+            matchManager.RegisterPlayer(playerInput.gameObject, index);
+        }
+
+        Debug.Log($"Player {index + 1} joined as {(defaultClassData != null ? defaultClassData.className : "unknown")} (Device: {playerInput.currentControlScheme})");
     }
 
     private void OnPlayerLeft(PlayerInput playerInput)
