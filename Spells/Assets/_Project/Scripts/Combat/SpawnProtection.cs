@@ -48,14 +48,10 @@ public class SpawnProtection : MonoBehaviour
 
         protectionTimer -= Time.deltaTime;
 
-        // Force invincibility (overrides HealthSystem's own i-frame logic)
-        if (health != null && !health.IsInvincible)
+        // Continuously grant invincibility during protection
+        if (health != null)
         {
-            // HealthSystem doesn't have a public setter for invincibility,
-            // so we prevent damage by temporarily setting HP very high
-            // Actually — we'll just use the i-frame blink visual
-            // and rely on i-frames being active. The real protection
-            // comes from HealthSystem.IsInvincible being set below.
+            health.GrantInvincibility(0.2f); // Re-grant frequently to stay invincible
         }
 
         // Visual blink

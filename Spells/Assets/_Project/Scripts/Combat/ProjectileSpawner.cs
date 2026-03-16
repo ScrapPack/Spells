@@ -119,6 +119,11 @@ public class ProjectileSpawner : MonoBehaviour
 
         // Cooldown
         fireCooldownTimer = combatData.fireCooldown;
+
+        // Analytics
+        var analytics = Object.FindAnyObjectByType<CombatAnalytics>();
+        if (analytics != null && identity != null)
+            analytics.RecordProjectileFired(identity.PlayerID);
     }
 
     /// <summary>

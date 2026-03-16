@@ -104,6 +104,16 @@ public class HealthSystem : MonoBehaviour
     }
 
     /// <summary>
+    /// Grant invincibility for a duration (e.g., teleport blink, spawn protection).
+    /// Extends existing invincibility if already active.
+    /// </summary>
+    public void GrantInvincibility(float duration)
+    {
+        IsInvincible = true;
+        invincibilityTimer = Mathf.Max(invincibilityTimer, duration);
+    }
+
+    /// <summary>
     /// Reset to full HP for new round.
     /// </summary>
     public void ResetForRound()
