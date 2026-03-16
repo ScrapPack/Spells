@@ -53,9 +53,20 @@ public class SpellEffectRegistry : MonoBehaviour
         Register("venom_dart", typeof(VenomDartEffect));
         Register("hex_mark", typeof(HexMarkEffect));
 
+        // Alchemist cards
+        Register("sticky_brew", typeof(StickyBrewEffect));
+        Register("volatile_mix", typeof(VolatileMixEffect));
+
+        // Shaman cards
+        Register("spirit_bond", typeof(SpiritBondEffect));
+        Register("ancestral_totem", typeof(AncestralTotemEffect));
+
         // Rogue cards
         Register("ambush", typeof(AmbushEffect));
         Register("smoke_bomb", typeof(SmokeBombEffect));
+
+        // Warlock Tier 2
+        Register("dark_tether", typeof(DarkTetherEffect));
     }
 
     /// <summary>
