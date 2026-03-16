@@ -12,6 +12,7 @@ public class PlayerStateMachine : MonoBehaviour
     public GroundedState GroundedState { get; private set; }
     public AirborneState AirborneState { get; private set; }
     public WallSlideState WallSlideState { get; private set; }
+    public HitstunState HitstunState { get; private set; }
 
     // Shared timers accessible by states
     public float JumpBufferTimer { get; set; }
@@ -31,6 +32,7 @@ public class PlayerStateMachine : MonoBehaviour
         GroundedState = new GroundedState();
         AirborneState = new AirborneState();
         WallSlideState = new WallSlideState();
+        HitstunState = new HitstunState();
     }
 
     private void Start()
@@ -88,6 +90,16 @@ public class PlayerStateMachine : MonoBehaviour
         if (!initialized || Input == null) return;
 
         CurrentState?.FixedExecute();
+    }
+
+    /// <summary>
+    /// Enter hitstun state. Called by HealthSystem when damage is taken.
+    /// </summary>
+    public void EnterHitstun(float duration)
+    {
+        if (!initialized) return;
+        HitstunState.SetDuration(duration);
+        ChangeState(HitstunState);
     }
 
     public string GetStateName()

@@ -173,7 +173,7 @@ public class Projectile : MonoBehaviour
         // Apply damage
         bool didDamage = otherHealth.TakeDamage(Damage);
 
-        // Apply knockback
+        // Apply knockback and hitstun
         if (didDamage)
         {
             var otherRb = other.GetComponent<Rigidbody2D>();
@@ -181,6 +181,19 @@ public class Projectile : MonoBehaviour
             {
                 Vector2 knockDir = rb.linearVelocity.normalized;
                 otherRb.linearVelocity = knockDir * KnockbackForce;
+            }
+
+            // Trigger hitstun state
+            var otherStateMachine = other.GetComponent<PlayerStateMachine>();
+            if (otherStateMachine != null && HitstunDuration > 0f)
+            {
+                otherStateMachine.EnterHitstun(HitstunDuration);
+            }
+
+            // Screen shake
+            if (ScreenShake.Instance != null)
+            {
+                ScreenShake.Instance.ShakeOnHit();
             }
         }
 
