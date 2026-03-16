@@ -10,6 +10,13 @@ public class WallSlideState : IPlayerState
         this.ctx = ctx;
         ctx.CoyoteTimer = 0f;
         slideTimer = 0f;
+
+        // Spider shoes: immediately enter surface traversal instead of sliding
+        if (ctx.HasSpiderShoes)
+        {
+            ctx.ChangeState(ctx.SurfaceTraversalState);
+            return;
+        }
     }
 
     public void Execute()

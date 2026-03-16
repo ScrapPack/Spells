@@ -13,6 +13,12 @@ public class PlayerStateMachine : MonoBehaviour
     public AirborneState AirborneState { get; private set; }
     public WallSlideState WallSlideState { get; private set; }
     public HitstunState HitstunState { get; private set; }
+    public SurfaceTraversalState SurfaceTraversalState { get; private set; }
+
+    /// <summary>
+    /// Set by SpiderShoesItem. When true, wall/ceiling contact can trigger SurfaceTraversalState.
+    /// </summary>
+    public bool HasSpiderShoes { get; set; }
 
     // Shared timers accessible by states
     public float JumpBufferTimer { get; set; }
@@ -33,6 +39,7 @@ public class PlayerStateMachine : MonoBehaviour
         AirborneState = new AirborneState();
         WallSlideState = new WallSlideState();
         HitstunState = new HitstunState();
+        SurfaceTraversalState = new SurfaceTraversalState();
     }
 
     private void Start()

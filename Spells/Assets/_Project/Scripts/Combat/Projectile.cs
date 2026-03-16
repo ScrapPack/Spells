@@ -173,6 +173,19 @@ public class Projectile : MonoBehaviour
             return;
         }
 
+        // Hit a monster (PvE target)
+        var monster = other.GetComponent<MonsterEntity>();
+        if (monster != null && OwnerPlayerID >= 0)
+        {
+            float finalDamage = Damage * DamageMultiplier;
+            monster.TakeDamage(Mathf.RoundToInt(finalDamage), OwnerPlayerID);
+            if (!pierces)
+            {
+                Destroy(gameObject);
+            }
+            return;
+        }
+
         // Hit a wall or ground
         if (other.gameObject.layer == groundLayer || other.gameObject.layer == wallLayer)
         {

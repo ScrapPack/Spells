@@ -24,6 +24,9 @@ public class MatchManager : MonoBehaviour
     [SerializeField] private KillFeed killFeed;
     [SerializeField] private CharacterSelectManager charSelect;
     [SerializeField] private CombatAnalytics analytics;
+    [SerializeField] private MonsterSpawnManager monsterSpawnManager;
+    [SerializeField] private ChestSpawnManager chestSpawnManager;
+    [SerializeField] private ModularArenaBuilder arenaBuilder;
 
     [Header("Events")]
     public UnityEvent<MatchState> OnStateChanged;
@@ -162,6 +165,15 @@ public class MatchManager : MonoBehaviour
             roundManager.StartRound();
         }
 
+        // Spawn PvE elements
+        if (arenaBuilder != null && arenaBuilder.CurrentLayout != null)
+        {
+            if (monsterSpawnManager != null)
+                monsterSpawnManager.SpawnMonsters(arenaBuilder.CurrentLayout, arenaBuilder.MonsterSpawnPoints);
+            if (chestSpawnManager != null)
+                chestSpawnManager.SpawnChests(arenaBuilder.CurrentLayout, arenaBuilder.ChestSpawnPoints);
+        }
+
         ChangeState(MatchState.RoundActive);
     }
 
@@ -214,6 +226,12 @@ public class MatchManager : MonoBehaviour
                 return;
             }
         }
+
+        // Despawn PvE elements
+        if (monsterSpawnManager != null)
+            monsterSpawnManager.DespawnAll();
+        if (chestSpawnManager != null)
+            chestSpawnManager.DespawnAll();
 
         // Reset camera zoom
         if (multiCamera != null)

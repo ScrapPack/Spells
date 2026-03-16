@@ -203,4 +203,25 @@ public class DraftManager : MonoBehaviour
     {
         return playerLevels.ContainsKey(playerID) ? playerLevels[playerID] : 0;
     }
+
+    /// <summary>
+    /// Get the sum of all player levels. Used to scale monsters and chest item pools.
+    /// </summary>
+    public int GetTotalLevelPool()
+    {
+        int total = 0;
+        foreach (var kvp in playerLevels)
+            total += kvp.Value;
+        return total;
+    }
+
+    /// <summary>
+    /// Grant a level to a player (e.g., for killing a monster).
+    /// Alternative progression path — catch-up mechanic.
+    /// </summary>
+    public void GrantLevel(int playerID)
+    {
+        if (playerLevels.ContainsKey(playerID))
+            playerLevels[playerID]++;
+    }
 }

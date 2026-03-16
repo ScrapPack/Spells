@@ -55,6 +55,16 @@ public class AirborneState : IPlayerState
             return;
         }
 
+        // Spider shoes: wall or ceiling contact enters surface traversal
+        if (ctx.HasSpiderShoes)
+        {
+            if (ctx.Physics.IsTouchingWall || ctx.Physics.IsOnCeiling)
+            {
+                ctx.ChangeState(ctx.SurfaceTraversalState);
+                return;
+            }
+        }
+
         // Wall slide: touching wall + holding toward it + falling
         if (ctx.Physics.IsTouchingWall
             && ctx.Controller.Rb.linearVelocity.y <= 0f

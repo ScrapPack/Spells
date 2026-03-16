@@ -69,6 +69,24 @@ public class ClassManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Swap CombatData for temporary item effects (FireWand, HitscanGun).
+    /// Returns the previous CombatData so it can be restored on unequip.
+    /// Re-initializes ProjectileSpawner and ParrySystem with the new data.
+    /// </summary>
+    public CombatData SwapCombatData(CombatData newData)
+    {
+        var previous = CombatData;
+        CombatData = newData;
+
+        if (spawner != null)
+            spawner.Initialize(CombatData, CurrentClass != null ? CurrentClass.projectilePrefab : null);
+        if (parry != null)
+            parry.Initialize(CombatData);
+
+        return previous;
+    }
+
+    /// <summary>
     /// Apply a stat modifier from a power card.
     /// This modifies the cloned CombatData directly.
     /// </summary>
