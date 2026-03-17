@@ -83,7 +83,7 @@ Scripts/
 | File | Role |
 |------|------|
 | `PlayerController.cs` | Physics-based movement (move, jump, slide, wall-jump, wave-land, dash, corner correction). `FacingDirection`, `ApplyDash()`, `EndDash()`, `TryCornerCorrect()` |
-| `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal / **Dash**. Owns `DashesRemaining`, `WallStamina`, `StartFreezeFrame()` |
+| `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal / **Dash**. Owns `DashesRemaining`, `WallStamina`, `LastWallDirection`, `StartFreezeFrame()` |
 | `IInputProvider.cs` | Interface — includes `DashPressed`, `DashHeld`, `ConsumeDash()` |
 | `PlayerInputHandler.cs` | Implements `IInputProvider` via Unity InputSystem. Handles `OnDash(InputValue)` via Send Messages |
 | `ClassManager.cs` | Applies `ClassData` to player; initializes combat/movement; applies card modifiers |
@@ -207,11 +207,15 @@ Implemented via `Specs/CelesteMovement.md`. Key mechanics:
 | **8-dir dash** | `DashState.cs` — snaps input to 8 directions, zeroes gravity, holds velocity for `dashDuration`. 1 air charge refills on ground or wall-jump |
 | **Freeze frame** | `PlayerStateMachine.StartFreezeFrame(duration)` — pauses `Update`/`FixedUpdate` for a short hitstop at dash start |
 | **Dash-jump / wavedash** | Jump during `DashState` → `EndDash(preserveHorizontal:true)` + jump force. Emergent wavedash: diagonal-down dash → immediate jump |
+| **Short hop / variable height** | `AirborneState` checks `!jumpCut && !JumpHeld && vy > 0` every frame — calls `CutJumpVelocity()` which multiplies vy by `jumpCutMultiplier` (default 0.4). `jumpCut` flag prevents double-cut. Tune `jumpCutMultiplier` in `MovementData` |
 | **Turnaround acceleration** | `MoveHorizontal()` detects input opposite to velocity, substitutes `turnAroundAcceleration` for normal accel rate |
+| **Dash startup burst** | `UpdateDashBurst()` in `PlayerController` — kicks an instant velocity on standstill start or direction reverse; `currentMaxSpeed` briefly overshoots then decays via `dashDecayRate`. Tune `dashBurstMultiplier` + `dashStillThreshold` in `MovementData` |
 | **Corner correction** | `TryCornerCorrect()` in `PlayerController` — called on every jump; nudges player past ceiling corners |
 | **Wall climb stamina** | `WallStamina` on `PlayerStateMachine` — drains while sliding, 2× while climbing up, refills on ground |
 | **Wall grab (no hold)** | `AirborneState` no longer requires holding toward wall — any wall contact (not holding away, stamina > 0) triggers `WallSlidingState` |
 | **Wall-jump refills dash** | `WallSlidingState` resets `DashesRemaining` on wall-jump |
+| **Wall coyote time** | `WallSlidingState` sets `CoyoteTimer` + `LastWallDirection` on detach. In `AirborneState.Execute`, coyote wall-jump is checked before ground coyote: `CoyoteTimer > 0 && LastWallDirection != 0` → `ApplyWallJump(LastWallDirection)`, refills dash, sets lockout. `LastWallDirection` cleared on ground landing (`GroundedState.Enter`) |
+| **Fast fall** | `AirborneState.FixedExecute` — holding down while `vy <= 0` accelerates toward `-fastFallMaxSpeed` using `MoveTowards` at rate `fastFallGravityMultiplier × gravityScale × 3`. Normal gravity still applies; no special gravity multiplier |
 
 > **Required Unity setup:** Add a **"Dash"** action (Button type) to your Input Action Asset mapped to `Shift` / South gamepad button. `PlayerInputHandler` receives it via `OnDash` Send Messages automatically.
 
@@ -221,7 +225,8 @@ Implemented via `Specs/CelesteMovement.md`. Key mechanics:
 
 ### BoxArenaBuilder
 Owns the full 2-player match loop inline:
-- `Start()` builds geometry, spawns players, creates `SpellEffectRegistry`, then starts the first round.
+- `Start()` builds geometry, spawns players via `PlayerInput.Instantiate()`, creates `SpellEffectRegistry`, then starts the first round.
+- **Player spawning**: uses `PlayerInput.Instantiate(prefab, playerIndex, controlScheme, -1, Keyboard.current)`. P1 gets scheme `"KeyboardWASD"`, P2 gets `"KeyboardArrows"`. Schemes are defined in `PlayerInputActions.inputactions`.
 - **Round loop**: `StartRound()` → subscribes to `HealthSystem.OnDeath` → `OnPlayerDied()` → `EndRound()` → `AutoPickCard()` for losers → `DelayedNextRound()` coroutine → `StartRound()`.
 - `AutoPickCard(playerIndex)` draws randomly from the player's assigned `PowerCardData[]` pool and calls `CardInventory.AddCard()`.
 - `EndMatch(winnerIndex)` fires when a player reaches `winsToWinMatch` round wins.
