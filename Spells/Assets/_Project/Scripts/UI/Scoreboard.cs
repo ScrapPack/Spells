@@ -4,6 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Displays round wins per player. Rendered with OnGUI.
 /// Shows player color, name/class, and win count as filled pips.
+/// Call UpdateScores() each time the score changes.
 /// </summary>
 public class Scoreboard : MonoBehaviour
 {
@@ -19,22 +20,27 @@ public class Scoreboard : MonoBehaviour
         new Color(1f, 0.9f, 0.2f),
     };
 
-    private MatchManager matchManager;
+    private Dictionary<int, int> scores = new Dictionary<int, int>();
     private GUIStyle labelStyle;
-    private GUIStyle pipFullStyle;
-    private GUIStyle pipEmptyStyle;
     private Texture2D fullTex;
     private Texture2D emptyTex;
 
-    public void Initialize(MatchManager manager, int roundsToWin)
+    public void SetWinsToWin(int roundsToWin)
     {
-        matchManager = manager;
         winsToWin = roundsToWin;
+    }
+
+    /// <summary>
+    /// Push a fresh score snapshot. Call this whenever round wins change.
+    /// </summary>
+    public void UpdateScores(Dictionary<int, int> newScores)
+    {
+        scores = new Dictionary<int, int>(newScores);
     }
 
     private void OnGUI()
     {
-        if (matchManager == null) return;
+        if (scores.Count == 0) return;
 
         // Lazy-init styles
         if (labelStyle == null)
@@ -46,31 +52,28 @@ public class Scoreboard : MonoBehaviour
                 alignment = TextAnchor.MiddleLeft
             };
 
-            fullTex = MakeTex(1, 1, Color.white);
+            fullTex  = MakeTex(1, 1, Color.white);
             emptyTex = MakeTex(1, 1, new Color(0.3f, 0.3f, 0.3f, 0.5f));
         }
 
-        var scores = matchManager.GetAllScores();
-        if (scores.Count == 0) return;
-
-        float x = Screen.width / 2f - 150;
-        float y = 8;
-        float lineH = 28f;
+        float x      = Screen.width / 2f - 150;
+        float y      = 8;
+        float lineH  = 28f;
         float pipSize = 16f;
-        float pipGap = 4f;
+        float pipGap  = 4f;
 
-        foreach (var kvp in scores)
+        var sortedKeys = new List<int>(scores.Keys);
+        sortedKeys.Sort();
+
+        foreach (int playerID in sortedKeys)
         {
-            int playerID = kvp.Key;
-            int wins = kvp.Value;
+            int wins = scores[playerID];
 
             Color pColor = playerID < playerColors.Length ? playerColors[playerID] : Color.white;
             labelStyle.normal.textColor = pColor;
 
-            // Player label
             GUI.Label(new Rect(x, y, 100, lineH), $"P{playerID + 1}", labelStyle);
 
-            // Win pips
             for (int i = 0; i < winsToWin; i++)
             {
                 Rect pipRect = new Rect(x + 60 + i * (pipSize + pipGap), y + 6, pipSize, pipSize);

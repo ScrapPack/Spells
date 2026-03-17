@@ -21,6 +21,17 @@ public class TestArenaBuilder : MonoBehaviour
 
     private MultiTargetCamera multiTargetCamera;
 
+    // Inline player-join state (replaces PlayerSpawnManager)
+    private Transform[] testSpawnPoints;
+    private int         testPlayerCount;
+    private static readonly Color[] TestPlayerColors =
+    {
+        new Color(0.2f, 0.5f, 1f),   // Blue
+        new Color(1f,   0.3f, 0.3f), // Red
+        new Color(0.3f, 1f,   0.3f), // Green
+        new Color(1f,   0.9f, 0.2f), // Yellow
+    };
+
     private void Start()
     {
         if (movementData == null)
@@ -431,24 +442,55 @@ public class TestArenaBuilder : MonoBehaviour
     }
 
     /// <summary>
-    /// Wire up PlayerSpawnManager + PlayerInputManager with provided spawn points.
-    /// Used by both the static arena path and the procedural generation path.
+    /// Wire up PlayerInputManager with provided spawn points.
+    /// OnPlayerJoined (below) is called automatically via SendMessages when a player joins.
     /// </summary>
     private void SetupPlayerSpawningWithSpawns(Transform[] spawnPoints)
     {
-        // Set up PlayerSpawnManager FIRST (before PlayerInputManager can fire events)
-        var spawnManager = gameObject.GetComponent<PlayerSpawnManager>();
-        if (spawnManager == null)
-            spawnManager = gameObject.AddComponent<PlayerSpawnManager>();
+        testSpawnPoints  = spawnPoints;
+        testPlayerCount  = 0;
 
-        spawnManager.Initialize(spawnPoints, multiTargetCamera);
-
-        // Set up PlayerInputManager AFTER spawn manager is ready
         var manager = gameObject.GetComponent<PlayerInputManager>();
         if (manager == null)
             manager = gameObject.AddComponent<PlayerInputManager>();
 
         manager.joinBehavior = PlayerJoinBehavior.JoinPlayersWhenButtonIsPressed;
         manager.playerPrefab = playerPrefab;
+    }
+
+    /// <summary>
+    /// Called automatically by PlayerInputManager via SendMessages when a player joins.
+    /// Handles positioning, color, identity, and camera registration.
+    /// </summary>
+    private void OnPlayerJoined(PlayerInput playerInput)
+    {
+        int index = testPlayerCount++;
+
+        if (testSpawnPoints != null && index < testSpawnPoints.Length)
+            playerInput.transform.position = testSpawnPoints[index].position;
+
+        var sr = playerInput.GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            if (sr.sprite == null)
+            {
+                var tex    = new Texture2D(64, 64);
+                var pixels = new Color[64 * 64];
+                for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.white;
+                tex.SetPixels(pixels);
+                tex.Apply();
+                tex.filterMode = FilterMode.Point;
+                sr.sprite = Sprite.Create(tex, new Rect(0, 0, 64, 64), new Vector2(0.5f, 0.5f), 64);
+            }
+            if (index < TestPlayerColors.Length)
+                sr.color = TestPlayerColors[index];
+        }
+
+        playerInput.GetComponent<PlayerIdentity>()?.Initialize(index);
+
+        if (multiTargetCamera != null)
+            multiTargetCamera.AddTarget(playerInput.transform);
+
+        Debug.Log($"TestArenaBuilder: Player {index + 1} joined (Device: {playerInput.currentControlScheme})");
     }
 }

@@ -3,7 +3,7 @@ using UnityEngine.Events;
 
 /// <summary>
 /// PvE monster entity with its own HP tracking (NOT HealthSystem).
-/// Monsters are NOT registered with RoundManager — they exist alongside
+/// Monsters are NOT tracked by the round loop — they exist alongside
 /// the PvP combat as optional targets. Killing a monster grants a level.
 ///
 /// AI behavior: Patrol → Detect → Telegraph → Attack → Cooldown

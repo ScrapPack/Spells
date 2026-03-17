@@ -21,7 +21,7 @@ public class ClassManager : MonoBehaviour
 
     private void Start()
     {
-        // Auto-initialize if no external system (PlayerSpawnManager) called Initialize()
+        // Auto-initialize if BoxArenaBuilder did not call Initialize() before Start()
         if (CombatData == null && classData != null)
         {
             var identity = GetComponent<PlayerIdentity>();

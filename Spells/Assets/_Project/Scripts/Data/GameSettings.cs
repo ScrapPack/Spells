@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Configurable match settings. Used by MatchManager and DraftManager.
+/// Configurable match settings ScriptableObject.
 /// Can be modified in Custom Match setup.
 /// </summary>
 [CreateAssetMenu(fileName = "GameSettings", menuName = "Spells/Game Settings")]

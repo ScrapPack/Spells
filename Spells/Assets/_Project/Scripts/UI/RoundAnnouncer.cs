@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Full-screen announcements: "ROUND 1", "FIGHT!", "Player X Wins!", "MATCH OVER!".
-/// Subscribes to MatchManager and RoundManager events.
+/// Call Announce/AnnounceRound/AnnounceRoundWin/AnnounceMatchWin directly.
 /// Rendered with OnGUI for now — can be replaced with Canvas animation later.
 /// </summary>
 public class RoundAnnouncer : MonoBehaviour

@@ -21,7 +21,7 @@ public class MultiTargetCamera : MonoBehaviour
     private float zoomProgress;
 
     /// <summary>
-    /// Set by RoundManager. 0 = no zoom, 1 = full compression.
+    /// Drive camera zoom. 0 = no zoom, 1 = full compression.
     /// </summary>
     public void SetZoomProgress(float progress)
     {
@@ -48,6 +48,7 @@ public class MultiTargetCamera : MonoBehaviour
 
     private void LateUpdate()
     {
+        targets.RemoveAll(t => t == null);
         if (targets.Count == 0) return;
 
         Vector3 center = GetCenterPoint();

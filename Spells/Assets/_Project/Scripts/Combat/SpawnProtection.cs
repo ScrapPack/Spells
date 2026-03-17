@@ -26,7 +26,7 @@ public class SpawnProtection : MonoBehaviour
     private bool isProtected;
 
     /// <summary>
-    /// Activate spawn protection. Called by PlayerSpawnManager or RoundManager.
+    /// Activate spawn protection. Call after respawning a player.
     /// </summary>
     public void Activate(float duration = 0f)
     {

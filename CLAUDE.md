@@ -16,7 +16,8 @@ Spells/                         # Repo root
 ├── CLAUDE.md                   # This file
 ├── Specs/                      # Feature requirements specs
 │   ├── BoxArenaScene.md        # Box arena scene spec
-│   └── CelesteMovement.md      # Celeste-style movement spec
+│   ├── CelesteMovement.md      # Celeste-style movement spec
+│   └── ManagerRemoval.md       # Removal of Core manager layer spec
 └── Spells/                     # Unity project root
     └── Assets/
         ├── Scenes/
@@ -68,20 +69,15 @@ Scripts/
 
 ## Core Systems
 
-### Match Flow — `Scripts/Core/`
+### Core Scene Builders — `Scripts/Core/`
 | File | Role |
 |------|------|
-| `MatchManager.cs` | Top-level state machine: CharSelect → Round → Draft → MatchEnd. `SetReferences()` for runtime wiring |
-| `RoundManager.cs` | Single-round lifecycle; tracks living players; triggers camera zoom |
-| `DraftManager.cs` | Post-round card draft; class-filtered pool with General pool fallback. `SetCardDatabase()` for runtime wiring |
-| `CharacterSelectManager.cs` | Class pick + ready-up |
-| `PlayerSpawnManager.cs` | Spawns players; `autoStartMatchAtPlayerCount` auto-triggers `StartMatch()` when enough players join; `SetMatchManager()`, `SetDefaultClass()`, `SetAutoStartCount()` for runtime wiring |
+| `BoxArenaBuilder.cs` | Self-contained 2-player match runner — builds geometry, spawns players, owns round/match/draft loop inline. No external managers required |
+| `TestArenaBuilder.cs` | Movement-test scene builder — static + procedural arena paths, handles `OnPlayerJoined` inline via SendMessages |
 | `ProceduralLevelGenerator.cs` | 6-phase compositional pipeline for arena generation |
 | `ModularArenaBuilder.cs` | Builds arenas from `ArenaLayoutData` using prefab pieces |
-| `MonsterSpawnManager.cs` | PvE monster spawning |
-| `ChestSpawnManager.cs` | Item chest placement |
-| `BoxArenaBuilder.cs` | Runtime builder for the simple 2-player box arena scene — builds geometry, wires all managers, handles respawn |
-| `AutoDraftPicker.cs` | Auto-picks a random card during draft when no DraftUI is present; used by BoxArena scene |
+| `LevelValidator.cs` | Reachability validation for generated layouts |
+| `CombatAnalytics.cs` | Event-driven analytics utility |
 
 ### Player — `Scripts/Player/`
 | File | Role |
@@ -146,7 +142,7 @@ Player states are separate files in `States/`: `GroundedState.cs`, `AirborneStat
 
 **Composition over Inheritance** — Players are a flat composition of MonoBehaviours (no deep hierarchies). Systems communicate via events and interfaces.
 
-**State Machine** — `PlayerStateMachine` manages movement states. `MatchManager` uses a state enum for match flow.
+**State Machine** — `PlayerStateMachine` manages movement states.
 
 **Event-Driven** — UnityEvents decouple systems: `OnRoundEnd`, `OnDeath`, `OnCardAdded`, `OnParrySuccess`, etc. Analytics listens to events rather than being called directly.
 
@@ -221,10 +217,19 @@ Implemented via `Specs/CelesteMovement.md`. Key mechanics:
 
 ## Runtime Builder Pattern
 
-`BoxArenaBuilder` and `TestArenaBuilder` share the same pattern for building scenes entirely at runtime — no scene hierarchy setup required. Key points:
+`BoxArenaBuilder` and `TestArenaBuilder` build their scenes entirely at runtime — no scene hierarchy setup required. There are no external manager dependencies.
 
-- All managers are created via `AddComponent` in `Start()`; their own `Start()` runs the next frame, so refs set immediately after `AddComponent` are available when they initialize.
-- `PlayerInputManager` uses the default **SendMessages** notification behavior — Unity calls `OnPlayerJoined(PlayerInput)` directly on components of the same GameObject, so `PlayerSpawnManager` doesn't need a C# event subscription.
-- When skipping `CharacterSelectManager`, set `charSelect` to null and use `PlayerSpawnManager.autoStartMatchAtPlayerCount` to trigger `StartMatch()` once enough players join.
+### BoxArenaBuilder
+Owns the full 2-player match loop inline:
+- `Start()` builds geometry, spawns players, creates `SpellEffectRegistry`, then starts the first round.
+- **Round loop**: `StartRound()` → subscribes to `HealthSystem.OnDeath` → `OnPlayerDied()` → `EndRound()` → `AutoPickCard()` for losers → `DelayedNextRound()` coroutine → `StartRound()`.
+- `AutoPickCard(playerIndex)` draws randomly from the player's assigned `PowerCardData[]` pool and calls `CardInventory.AddCard()`.
+- `EndMatch(winnerIndex)` fires when a player reaches `winsToWinMatch` round wins.
+- `SpellEffectRegistry` is created as a standalone GameObject in `Start()`; `CardInventory.AddCard()` relies on `SpellEffectRegistry.Instance` being set before any card is picked.
 - Between rounds, `PlayerDeathHandler.ResetForRound()` must be called on dead players before repositioning — it re-enables the GameObject, colliders, rigidbody, and input.
 - `EnvironmentHazard` damage fields are private `[SerializeField]`; for instant-kill triggers, use `InstantKillTrigger` (defined in `BoxArenaBuilder.cs`) instead.
+
+### TestArenaBuilder
+Movement-test scene only — no match logic:
+- `SetupPlayerSpawningWithSpawns()` adds `PlayerInputManager` and stores spawn points.
+- `OnPlayerJoined(PlayerInput)` is called by `PlayerInputManager` via **SendMessages** (no C# event subscription needed). Handles position, color, `PlayerIdentity`, and camera registration inline.

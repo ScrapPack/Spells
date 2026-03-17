@@ -129,6 +129,7 @@ GameObject:
   m_Component:
   - component: {fileID: 599388250}
   - component: {fileID: 599388249}
+  - component: {fileID: 599388251}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -216,6 +217,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &599388251
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 599388248}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1 &1013278696
 GameObject:
   m_ObjectHideFlags: 0
@@ -286,10 +316,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1345485587}
-  - component: {fileID: 1345485581}
-  - component: {fileID: 1345485585}
-  - component: {fileID: 1345485584}
-  - component: {fileID: 1345485583}
   - component: {fileID: 1345485582}
   - component: {fileID: 1345485586}
   m_Layer: 0
@@ -299,40 +325,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1345485581
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345485580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ae4f1c4fea311450dbb0f35232e4e1c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Spells::MatchManager
-  winsToWinMatch: 5
-  roundManager: {fileID: 1345485585}
-  draftManager: {fileID: 1345485584}
-  multiCamera: {fileID: 1893254519}
-  spawnManager: {fileID: 2000354835}
-  announcer: {fileID: 0}
-  killFeed: {fileID: 0}
-  charSelect: {fileID: 1345485583}
-  analytics: {fileID: 1345485582}
-  monsterSpawnManager: {fileID: 0}
-  chestSpawnManager: {fileID: 0}
-  arenaBuilder: {fileID: 2000354837}
-  levelGenerator: {fileID: 2000354836}
-  OnStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  OnMatchWin:
-    m_PersistentCalls:
-      m_Calls: []
-  OnScoreUpdate:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &1345485582
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -346,91 +338,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Spells::CombatAnalytics
   OnStatsUpdated:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &1345485583
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345485580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d90d3a5102321461daea773967b7a22f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Spells::CharacterSelectManager
-  availableClasses: []
-  allowDuplicates: 1
-  readyCountdown: 3
-  OnCharSelectStart:
-    m_PersistentCalls:
-      m_Calls: []
-  OnClassSelected:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPlayerReady:
-    m_PersistentCalls:
-      m_Calls: []
-  OnAllReady:
-    m_PersistentCalls:
-      m_Calls: []
-  OnCharSelectComplete:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &1345485584
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345485580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5afcfbd5683d477b818d837a3b435dc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Spells::DraftManager
-  optionsPerPick: 4
-  generalPoolRatio: 0.4
-  allCards: []
-  OnDraftStart:
-    m_PersistentCalls:
-      m_Calls: []
-  OnShowOptions:
-    m_PersistentCalls:
-      m_Calls: []
-  OnCardPicked:
-    m_PersistentCalls:
-      m_Calls: []
-  OnDraftComplete:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &1345485585
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1345485580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fa7ee5094a8b34d2bab3b41efbd5e69f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Spells::RoundManager
-  zoomDelaySeconds: 30
-  maxRoundSeconds: 90
-  enableTimeout: 1
-  overtimeSeconds: 10
-  OnRoundStart:
-    m_PersistentCalls:
-      m_Calls: []
-  OnPlayerEliminated:
-    m_PersistentCalls:
-      m_Calls: []
-  OnRoundEnd:
-    m_PersistentCalls:
-      m_Calls: []
-  OnEliminationOrder:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &1345485586
@@ -452,6 +359,66 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1345485580}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1426784631
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1426784633}
+  - component: {fileID: 1426784632}
+  m_Layer: 0
+  m_Name: BoxArena
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1426784632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1426784631}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b10c97782aaa4ac1b250d37c27edc30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::BoxArenaBuilder
+  player1Prefab: {fileID: 7448692061287126237, guid: 70c2b3476b41f1d4f8c63cec54c0357f, type: 3}
+  player1ClassData: {fileID: 11400000, guid: 0af39cc922c55477c8518fc9a9cdf41e, type: 2}
+  player1Cards:
+  - {fileID: 11400000, guid: e01e06e1a77bd400a86d03dbe4d953f6, type: 2}
+  player2Prefab: {fileID: 7448692061287126237, guid: 70c2b3476b41f1d4f8c63cec54c0357f, type: 3}
+  player2ClassData: {fileID: 11400000, guid: f4529c05da96445dbae4cdd589b299cd, type: 2}
+  player2Cards:
+  - {fileID: 11400000, guid: 60182561cc255406f96ebf89f58f1b6a, type: 2}
+  winsToWinMatch: 3
+  roundEndDelay: 2
+  arenaWidth: 24
+  arenaHeight: 14
+  floorColor: {r: 0.35, g: 0.32, b: 0.28, a: 1}
+  wallColor: {r: 0.22, g: 0.2, b: 0.24, a: 1}
+  ceilingColor: {r: 0.18, g: 0.18, b: 0.22, a: 1}
+  killZoneColor: {r: 0.6, g: 0.1, b: 0.1, a: 0.4}
+--- !u!4 &1426784633
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1426784631}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -496,7 +463,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c2c59ef7b49846648092d0901283614, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Spells::PostMatchSummary
-  matchManager: {fileID: 0}
   analytics: {fileID: 0}
 --- !u!114 &1864615653
 MonoBehaviour:
@@ -510,10 +476,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 703841960db7a4f82b3c388b6876d4ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Spells::CharacterSelectUI
-  selectManager: {fileID: 0}
-  panelWidth: 200
-  panelHeight: 280
-  panelSpacing: 20
 --- !u!114 &1864615654
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -543,11 +505,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef9a16afcfffe4d8e89915ea88971ed8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Spells::RoundTimerUI
-  roundManager: {fileID: 0}
-  zoomWarningThreshold: 0.3
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.6, b: 0, a: 1}
   dangerColor: {r: 1, g: 0.2, b: 0.2, a: 1}
+  warningSeconds: 30
+  dangerSeconds: 10
 --- !u!114 &1864615656
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -645,6 +607,7 @@ GameObject:
   - component: {fileID: 1893254521}
   - component: {fileID: 1893254519}
   - component: {fileID: 1893254520}
+  - component: {fileID: 1893254523}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -744,111 +707,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2000354834
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2000354839}
-  - component: {fileID: 2000354838}
-  - component: {fileID: 2000354837}
-  - component: {fileID: 2000354836}
-  - component: {fileID: 2000354835}
-  m_Layer: 0
-  m_Name: ArenaSetup
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &2000354835
+--- !u!114 &1893254523
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2000354834}
+  m_GameObject: {fileID: 1893254518}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0807a5e43a44cc542a91a70e52b680d3, type: 3}
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Spells::PlayerSpawnManager
-  spawnPoints: []
-  playerColors:
-  - {r: 0.2, g: 0.5, b: 1, a: 1}
-  - {r: 1, g: 0.3, b: 0.3, a: 1}
-  - {r: 0.3, g: 1, b: 0.3, a: 1}
-  - {r: 1, g: 0.9, b: 0.2, a: 1}
-  multiTargetCamera: {fileID: 1893254519}
-  matchManager: {fileID: 1345485581}
-  defaultClassData: {fileID: 11400000, guid: 0af39cc922c55477c8518fc9a9cdf41e, type: 2}
---- !u!114 &2000354836
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2000354834}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f3973072023864565ab61c84d754007d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Spells::ProceduralLevelGenerator
-  biomePool:
-  - {fileID: 11400000, guid: a3477e1db15bd4bc581ccd91931bfa12, type: 2}
-  - {fileID: 11400000, guid: 8c7c40dbcb10b499ca48b689340b8bab, type: 2}
-  - {fileID: 11400000, guid: 7fc705bb995ef47b3b0187a1853ed1ae, type: 2}
-  - {fileID: 11400000, guid: 3a5e5a9c15d3b4896ae318f58ccc5e5f, type: 2}
-  - {fileID: 11400000, guid: b863bf941201a40ea832f6fe2e924a0e, type: 2}
-  movementData: {fileID: 11400000, guid: bbd0b9d16ce114946bdf87610aa2d75b, type: 2}
-  baseSeed: 0
-  maxRetries: 10
---- !u!114 &2000354837
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2000354834}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6c3b1ea862ec7428e89f4c128d5086a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Spells::ModularArenaBuilder
-  layout: {fileID: 0}
-  multiCamera: {fileID: 1893254519}
---- !u!114 &2000354838
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2000354834}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3a0dd385cdeee864fa6dccc4b8a7497a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Spells::TestArenaBuilder
-  movementData: {fileID: 11400000, guid: bbd0b9d16ce114946bdf87610aa2d75b, type: 2}
-  playerPrefab: {fileID: 7448692061287126237, guid: 70c2b3476b41f1d4f8c63cec54c0357f, type: 3}
---- !u!4 &2000354839
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2000354834}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -857,5 +759,5 @@ SceneRoots:
   - {fileID: 1345485587}
   - {fileID: 1013278699}
   - {fileID: 1864615660}
-  - {fileID: 2000354839}
   - {fileID: 599388250}
+  - {fileID: 1426784633}

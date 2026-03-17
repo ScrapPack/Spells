@@ -4,8 +4,8 @@ using TMPro;
 
 /// <summary>
 /// UI for the power card draft between rounds.
-/// Shows 4 card options for the current drafter.
-/// Each card displays name, positive effect, negative effect, tier, and class tag.
+/// Shows card options for the current drafter.
+/// Call ShowOptions() to display cards, OnCardSelected() handles pick.
 /// </summary>
 public class DraftUI : MonoBehaviour
 {
@@ -20,45 +20,23 @@ public class DraftUI : MonoBehaviour
     [Header("Timer")]
     [SerializeField] private TextMeshProUGUI timerText;
 
-    private DraftManager draftManager;
     private int currentDrafterID;
     private PowerCardData[] currentOptions;
     private float draftTimer;
     private float draftTimeLimit;
 
-    public void Initialize(DraftManager manager, float timeLimit)
-    {
-        draftManager = manager;
-        draftTimeLimit = timeLimit;
-
-        if (manager != null)
-        {
-            manager.OnDraftStart.AddListener(OnDraftStart);
-            manager.OnShowOptions.AddListener(OnShowOptions);
-            manager.OnDraftComplete.AddListener(OnDraftComplete);
-        }
-
-        Hide();
-    }
-
-    private void OnDraftStart()
-    {
-        if (draftPanel != null)
-            draftPanel.SetActive(true);
-    }
-
-    private void OnShowOptions(int playerID, PowerCardData[] options)
+    public void ShowOptions(int playerID, PowerCardData[] options, float timeLimit = 0f)
     {
         currentDrafterID = playerID;
-        currentOptions = options;
-        draftTimer = draftTimeLimit;
+        currentOptions   = options;
+        draftTimeLimit   = timeLimit;
+        draftTimer       = timeLimit;
 
         if (drafterNameText != null)
             drafterNameText.text = $"Player {playerID + 1} — Pick a card";
         if (instructionText != null)
             instructionText.text = "Every card has a price...";
 
-        // Populate card slots
         for (int i = 0; i < 4; i++)
         {
             if (i < cardSlots.Length && cardSlots[i] != null)
@@ -69,60 +47,51 @@ public class DraftUI : MonoBehaviour
                     cardSlots[i].Hide();
             }
         }
+
+        if (draftPanel != null)
+            draftPanel.SetActive(true);
+    }
+
+    public void Hide()
+    {
+        if (draftPanel != null)
+            draftPanel.SetActive(false);
     }
 
     /// <summary>
-    /// Called when a card slot is clicked.
+    /// Called when a card slot is clicked. Applies the card and hides the panel.
     /// </summary>
     public void OnCardSelected(int slotIndex)
     {
-        if (draftManager == null || currentOptions == null) return;
+        if (currentOptions == null || slotIndex >= currentOptions.Length) return;
 
-        // Apply card to player's inventory
         var players = Object.FindObjectsByType<PlayerIdentity>(FindObjectsSortMode.None);
         foreach (var player in players)
         {
             if (player.PlayerID == currentDrafterID)
             {
                 var inventory = player.GetComponent<CardInventory>();
-                if (inventory != null && slotIndex < currentOptions.Length)
-                {
+                if (inventory != null)
                     inventory.AddCard(currentOptions[slotIndex]);
-                }
                 break;
             }
         }
 
-        draftManager.PickCard(currentDrafterID, slotIndex, currentOptions);
-    }
-
-    private void OnDraftComplete()
-    {
         Hide();
-    }
-
-    private void Hide()
-    {
-        if (draftPanel != null)
-            draftPanel.SetActive(false);
     }
 
     private void Update()
     {
         if (draftPanel == null || !draftPanel.activeSelf) return;
 
-        // Timer
         if (draftTimeLimit > 0f && draftTimer > 0f)
         {
             draftTimer -= Time.deltaTime;
             if (timerText != null)
                 timerText.text = Mathf.CeilToInt(draftTimer).ToString();
 
-            // Auto-pick if time runs out
             if (draftTimer <= 0f && currentOptions != null && currentOptions.Length > 0)
-            {
                 OnCardSelected(Random.Range(0, currentOptions.Length));
-            }
         }
     }
 }

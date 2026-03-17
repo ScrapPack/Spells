@@ -4,7 +4,7 @@ using UnityEngine.Events;
 
 /// <summary>
 /// Tracks per-player combat statistics across a match.
-/// Subscribes to HealthSystem, RoundManager, and ProjectileSpawner events.
+/// Subscribes to HealthSystem and ProjectileSpawner events.
 /// Data used by scoreboard, post-match summary, and for GDD balance tuning.
 ///
 /// Stats reset each match, accumulate across rounds.

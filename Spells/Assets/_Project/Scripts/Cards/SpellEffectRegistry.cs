@@ -7,7 +7,7 @@ using UnityEngine;
 /// When a card with hasSpecialBehavior is picked, this registry
 /// creates (or stacks) the correct SpellEffect on the player.
 ///
-/// Lives as a singleton on the same GameObject as MatchManager.
+/// Lives as a singleton — BoxArenaBuilder creates it at runtime.
 /// </summary>
 public class SpellEffectRegistry : MonoBehaviour
 {

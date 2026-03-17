@@ -4,14 +4,13 @@ using UnityEngine;
 /// <summary>
 /// Displays post-match summary stats: kills, deaths, KD ratio,
 /// parry success rate, damage dealt/received, cards picked.
-/// Shown after MatchManager enters MatchEnd state.
+/// Call ShowSummary(winnerID) to display.
 ///
 /// OnGUI for now — intended to be replaced with proper UI canvas.
 /// </summary>
 public class PostMatchSummary : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private MatchManager matchManager;
     [SerializeField] private CombatAnalytics analytics;
 
     private bool showSummary;
@@ -20,15 +19,11 @@ public class PostMatchSummary : MonoBehaviour
     private GUIStyle labelStyle;
     private GUIStyle valueStyle;
 
-    private void Start()
-    {
-        if (matchManager != null)
-        {
-            matchManager.OnMatchWin.AddListener(OnMatchWin);
-        }
-    }
-
-    private void OnMatchWin(int winner)
+    /// <summary>
+    /// Show the post-match summary for the given winner.
+    /// Call this from BoxArenaBuilder.EndMatch().
+    /// </summary>
+    public void ShowSummary(int winner)
     {
         winnerID = winner;
         showSummary = true;
@@ -139,11 +134,5 @@ public class PostMatchSummary : MonoBehaviour
                 alignment = TextAnchor.MiddleCenter
             };
         }
-    }
-
-    private void OnDestroy()
-    {
-        if (matchManager != null)
-            matchManager.OnMatchWin.RemoveListener(OnMatchWin);
     }
 }

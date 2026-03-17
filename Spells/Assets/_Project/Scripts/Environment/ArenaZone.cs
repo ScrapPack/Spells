@@ -1,15 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// The shrinking arena boundary. Players outside the boundary take damage.
-/// Syncs with RoundManager.ZoomProgress to shrink over time.
-///
-/// Works as an inverse safe zone: players inside the zone are safe,
-/// players outside take periodic damage. The zone shrinks as the round
-/// progresses, forcing players into tighter spaces.
-///
-/// Visual: could be a ring of fire, energy field, or just a damage zone.
-/// For now, uses a simple box bounds check.
+/// The arena boundary. Players outside the boundary take periodic damage.
+/// Call SetZoom(0..1) each frame to shrink the zone over the round.
+/// Call ResetForRound() at round start.
 /// </summary>
 public class ArenaZone : MonoBehaviour
 {
@@ -29,9 +23,6 @@ public class ArenaZone : MonoBehaviour
     [Tooltip("Knockback toward arena center when hit")]
     [SerializeField] private float pushForce = 5f;
 
-    [Header("References")]
-    [SerializeField] private RoundManager roundManager;
-
     public Vector2 CurrentSize { get; private set; }
     public Rect CurrentBounds { get; private set; }
 
@@ -47,12 +38,7 @@ public class ArenaZone : MonoBehaviour
 
     private void Update()
     {
-        if (roundManager == null || !roundManager.RoundActive) return;
-
-        // Shrink based on zoom progress
-        float zoom = roundManager.ZoomProgress;
-        CurrentSize = Vector2.Lerp(fullSize, minSize, zoom);
-        UpdateBounds();
+        // Bounds held at fullSize until ResetForRound() or SetZoom() is called externally
 
         // Tick player cooldowns
         var keys = new System.Collections.Generic.List<int>(playerCooldowns.Keys);
@@ -107,6 +93,15 @@ public class ArenaZone : MonoBehaviour
         float halfW = CurrentSize.x * 0.5f;
         float halfH = CurrentSize.y * 0.5f;
         CurrentBounds = new Rect(center.x - halfW, center.y - halfH, CurrentSize.x, CurrentSize.y);
+    }
+
+    /// <summary>
+    /// Drive zone shrinking externally (0 = full size, 1 = min size).
+    /// </summary>
+    public void SetZoom(float zoom)
+    {
+        CurrentSize = Vector2.Lerp(fullSize, minSize, Mathf.Clamp01(zoom));
+        UpdateBounds();
     }
 
     /// <summary>

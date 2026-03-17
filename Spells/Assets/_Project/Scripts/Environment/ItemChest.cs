@@ -15,7 +15,7 @@ public class ItemChest : MonoBehaviour
 
     /// <summary>
     /// Initialize chest with available items and current level pool.
-    /// Called by ChestSpawnManager after creation.
+    /// Called after creation to configure items.
     /// </summary>
     public void Initialize(ItemData[] items, int currentLevelPool)
     {

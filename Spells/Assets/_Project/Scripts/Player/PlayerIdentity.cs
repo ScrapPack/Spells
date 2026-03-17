@@ -9,7 +9,7 @@ public class PlayerIdentity : MonoBehaviour
     public int PlayerID { get; private set; }
 
     /// <summary>
-    /// Set by PlayerSpawnManager or MatchManager on spawn.
+    /// Set by BoxArenaBuilder on spawn.
     /// </summary>
     public void Initialize(int playerID)
     {
