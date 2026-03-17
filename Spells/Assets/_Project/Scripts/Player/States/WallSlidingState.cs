@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class WallSlideState : IPlayerState
+public class WallSlidingState : IPlayerState
 {
     private PlayerStateMachine ctx;
     private float slideTimer;

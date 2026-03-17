@@ -261,7 +261,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d064d50341b56f4ba34955f9385e5ba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Spells::PlayerController
-  baseMovementData: {fileID: 11400000, guid: bbd0b9d16ce114946bdf87610aa2d75b, type: 2}
+  baseMovementData: {fileID: 11400000, guid: 99533952e86712346ba9967388285daf, type: 2}
 --- !u!114 &5826175214802945321
 MonoBehaviour:
   m_ObjectHideFlags: 0
