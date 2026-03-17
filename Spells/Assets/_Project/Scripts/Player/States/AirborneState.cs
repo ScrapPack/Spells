@@ -31,7 +31,7 @@ public class AirborneState : IPlayerState
             jumpCut = true;
         }
 
-        // Dash (Celeste) — check before jump so dash-into-jump works via DashState
+        // Dash — check before jump so dash-into-jump works via DashState
         if (ctx.Input.DashPressed && ctx.DashesRemaining > 0)
         {
             ctx.ChangeState(ctx.DashState);
@@ -81,18 +81,19 @@ public class AirborneState : IPlayerState
             }
         }
 
-        // Wall slide: Celeste-style — just touching the wall is enough (no need to hold toward it).
-        // Only blocked by: rising too fast, wall jump lockout, actively pushing away, or no stamina.
-        // Allow wall grab while slightly rising (vy <= 2) so wall-jump chains work.
+        // Wall slide: touching wall + holding toward it + not rising fast
+        // Allow wall grab while slightly rising (vy <= 2) so wall-jump chains
+        // work — after a wall-jump (vy=16), the player reaches the opposite wall
+        // at ~0.42s while still at vy≈3.6. Requiring vy<=0 blocks the chain.
+        // On contact, zero vertical velocity for clean wall-slide entry.
         if (ctx.Physics.IsTouchingWall
             && ctx.Controller.Rb.linearVelocity.y <= 2f
-            && ctx.WallJumpLockoutTimer <= 0f
-            && ctx.WallStamina > 0f)
+            && ctx.WallJumpLockoutTimer <= 0f)
         {
             float inputX = ctx.Input.MoveInput.x;
-            bool holdingAway = (ctx.Physics.WallDirection == 1 && inputX < -0.3f)
-                            || (ctx.Physics.WallDirection == -1 && inputX > 0.3f);
-            if (!holdingAway)
+            bool holdingTowardWall = (ctx.Physics.WallDirection == 1 && inputX > 0.1f)
+                                  || (ctx.Physics.WallDirection == -1 && inputX < -0.1f);
+            if (holdingTowardWall)
             {
                 // Zero vertical velocity on wall grab for clean slide start
                 ctx.Controller.Rb.linearVelocity = new Vector2(

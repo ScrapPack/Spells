@@ -21,7 +21,7 @@
                     "id": "a1b2c3d4-5555-6666-7777-888899990000",
                     "expectedControlType": "Button",
                     "processors": "",
-                    "interactions": "",
+                    "interactions": "Press(behavior=2)",
                     "initialStateCheck": false
                 },
                 {
@@ -230,7 +230,7 @@
                 {
                     "name": "",
                     "id": "c4000001-0000-0000-0000-000000000001",
-                    "path": "<Mouse>/leftButton",
+                    "path": "<Keyboard>/f",
                     "interactions": "",
                     "processors": "",
                     "groups": "KeyboardWASD",
@@ -252,7 +252,7 @@
                 {
                     "name": "",
                     "id": "c4000003-0000-0000-0000-000000000003",
-                    "path": "<Gamepad>/rightTrigger",
+                    "path": "<Gamepad>/buttonEast",
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",

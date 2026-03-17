@@ -34,6 +34,10 @@ public class BoxArenaBuilder : MonoBehaviour
     [SerializeField] private float arenaWidth  = 24f;
     [SerializeField] private float arenaHeight = 14f;
 
+    [Header("Kill Zone")]
+    [Tooltip("How far outside the arena walls the kill boundary sits.")]
+    [SerializeField] private float killZonePadding = 6f;
+
     [Header("Arena Colors")]
     [SerializeField] private Color floorColor    = new Color(0.35f, 0.32f, 0.28f);
     [SerializeField] private Color wallColor     = new Color(0.22f, 0.20f, 0.24f);
@@ -277,6 +281,28 @@ public class BoxArenaBuilder : MonoBehaviour
             new Vector3(0, arenaHeight + t / 2f, 0),
             new Vector3(arenaWidth + t * 2f, t, 1f),
             ceilingColor);
+
+        // Kill zone boundary — four trigger strips outside the arena walls.
+        // Anything that escapes the playable area and enters these strips is killed/destroyed.
+        float kz   = killZonePadding;
+        float span = arenaWidth  + kz * 4f; // wide enough to catch corners
+        float tall = arenaHeight + kz * 4f;
+
+        CreateKillZone("KillZone_Bottom", arena.transform,
+            new Vector3(0f,           -t - kz / 2f,            0f),
+            new Vector3(span,          kz,                      1f));
+
+        CreateKillZone("KillZone_Top", arena.transform,
+            new Vector3(0f,            arenaHeight + t + kz / 2f, 0f),
+            new Vector3(span,          kz,                         1f));
+
+        CreateKillZone("KillZone_Left", arena.transform,
+            new Vector3(-hw - t - kz / 2f, arenaHeight / 2f,   0f),
+            new Vector3(kz,                tall,                1f));
+
+        CreateKillZone("KillZone_Right", arena.transform,
+            new Vector3(hw + t + kz / 2f,  arenaHeight / 2f,   0f),
+            new Vector3(kz,                tall,                1f));
     }
 
     private void CreateBox(string name, Transform parent, Vector3 position, Vector3 scale,
@@ -447,13 +473,21 @@ internal class KillZoneDamageOverride : MonoBehaviour
     }
 }
 
-/// <summary>Kills any player that enters this trigger immediately.</summary>
+/// <summary>Kills any player and destroys any projectile that enters this trigger.</summary>
 internal class InstantKillTrigger : MonoBehaviour
 {
     private void OnTriggerEnter2D(Collider2D other)
     {
+        // Kill players
         var health = other.GetComponent<HealthSystem>();
         if (health != null && health.IsAlive)
+        {
             health.TakeDamage(9999f, -1);
+            return;
+        }
+
+        // Destroy projectiles
+        if (other.GetComponent<Projectile>() != null)
+            Destroy(other.gameObject);
     }
 }

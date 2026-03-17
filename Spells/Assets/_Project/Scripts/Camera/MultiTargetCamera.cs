@@ -4,7 +4,7 @@ using UnityEngine;
 public class MultiTargetCamera : MonoBehaviour
 {
     [Header("Targets")]
-    private List<Transform> targets = new List<Transform>();
+    private readonly List<Transform> targets = new List<Transform>();
 
     [Header("Camera Settings")]
     [SerializeField] private float minOrthographicSize = 5f;
@@ -12,6 +12,10 @@ public class MultiTargetCamera : MonoBehaviour
     [SerializeField] private float orthographicSizePadding = 2f;
     [SerializeField] private float smoothSpeed = 5f;
     [SerializeField] private Vector3 offset = new Vector3(0f, 0f, -10f);
+
+    [Header("Projectile Tracking")]
+    [Tooltip("When enabled, live projectiles are included in the camera bounds.")]
+    [SerializeField] private bool trackProjectiles = true;
 
     [Header("Round Zoom")]
     [Tooltip("Minimum ortho size at full compression (end of round)")]
@@ -51,38 +55,36 @@ public class MultiTargetCamera : MonoBehaviour
         targets.RemoveAll(t => t == null);
         if (targets.Count == 0) return;
 
-        Vector3 center = GetCenterPoint();
-        Vector3 targetPosition = center + offset;
+        Bounds bounds = BuildBounds();
+
+        Vector3 targetPosition = bounds.center + offset;
         transform.position = Vector3.Lerp(transform.position, targetPosition, smoothSpeed * Time.deltaTime);
 
-        float targetSize = GetRequiredOrthographicSize();
+        float targetSize = GetRequiredOrthographicSize(bounds);
         cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, targetSize, smoothSpeed * Time.deltaTime);
     }
 
-    private Vector3 GetCenterPoint()
+    /// <summary>
+    /// Builds the bounding box that encompasses all tracked targets plus any
+    /// live projectiles (when trackProjectiles is enabled).
+    /// </summary>
+    private Bounds BuildBounds()
     {
-        if (targets.Count == 1)
-            return targets[0].position;
-
         var bounds = new Bounds(targets[0].position, Vector3.zero);
         for (int i = 1; i < targets.Count; i++)
-        {
             bounds.Encapsulate(targets[i].position);
+
+        if (trackProjectiles)
+        {
+            foreach (var proj in FindObjectsByType<Projectile>(FindObjectsSortMode.None))
+                bounds.Encapsulate(proj.transform.position);
         }
-        return bounds.center;
+
+        return bounds;
     }
 
-    private float GetRequiredOrthographicSize()
+    private float GetRequiredOrthographicSize(Bounds bounds)
     {
-        if (targets.Count <= 1)
-            return minOrthographicSize;
-
-        var bounds = new Bounds(targets[0].position, Vector3.zero);
-        for (int i = 1; i < targets.Count; i++)
-        {
-            bounds.Encapsulate(targets[i].position);
-        }
-
         float sizeY = bounds.size.y / 2f + orthographicSizePadding;
         float sizeX = (bounds.size.x / 2f + orthographicSizePadding) / cam.aspect;
         float requiredSize = Mathf.Max(sizeY, sizeX);

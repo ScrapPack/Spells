@@ -9,6 +9,16 @@ using UnityEngine;
 [RequireComponent(typeof(CircleCollider2D))]
 public class Projectile : MonoBehaviour
 {
+    [Header("Prefab Overrides")]
+    [Tooltip("Multiplies the lifetime from CombatData. 5 = five times longer.")]
+    [SerializeField] private float lifetimeMultiplier = 5f;
+
+    [Tooltip("How fast the bullet falls. 0 = no gravity, 1 = normal Unity gravity. Keep low (0.1–0.3) for slow arc.")]
+    [SerializeField] private float bulletGravity = 0.15f;
+
+    [Tooltip("How many times the bullet bounces off walls and ground before dying.")]
+    [SerializeField] private int bulletBounces = 3;
+
     public int OwnerPlayerID { get; private set; }
     public float Damage { get; private set; }
     public float KnockbackForce { get; private set; }
@@ -78,10 +88,10 @@ public class Projectile : MonoBehaviour
         IsReflected = false;
         isLanded = false;
 
-        lifetime = projectileLifetime;
+        lifetime = projectileLifetime * lifetimeMultiplier;
         lifetimeTimer = 0f;
-        bounces = bounce;
-        maxBounces = maxBounce;
+        bounces = bulletBounces > 0;
+        maxBounces = bulletBounces;
         bounceCount = 0;
         pierces = pierce;
         retrievable = retrieve;
@@ -90,8 +100,8 @@ public class Projectile : MonoBehaviour
         col.radius = radius;
         col.isTrigger = true;
 
-        // Rigidbody setup
-        rb.gravityScale = gravity;
+        // Rigidbody setup — bulletGravity overrides CombatData gravity
+        rb.gravityScale = bulletGravity;
         rb.linearVelocity = direction.normalized * speed;
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.freezeRotation = true;
@@ -249,10 +259,10 @@ public class Projectile : MonoBehaviour
     {
         if (bounces && bounceCount < maxBounces)
         {
-            // Bounce: reflect velocity off surface normal
-            // Using contact point approximation since we're a trigger
-            Vector2 toWall = (other.transform.position - transform.position).normalized;
-            Vector2 normal = -toWall; // Approximate surface normal
+            // Get the true surface normal via closest-points query so floor/wall/ceiling
+            // bounces all reflect correctly (not just walls).
+            ColliderDistance2D dist = Physics2D.Distance(col, other);
+            Vector2 normal = dist.isValid ? dist.normal : -(other.transform.position - transform.position).normalized;
             rb.linearVelocity = Vector2.Reflect(rb.linearVelocity, normal);
             bounceCount++;
 
