@@ -8,6 +8,9 @@ public class PlayerController : MonoBehaviour
     public MovementData Data { get; private set; }
     public Rigidbody2D Rb { get; private set; }
 
+    /// <summary>Direction the player is currently facing: +1 right, -1 left.</summary>
+    public int FacingDirection { get; private set; } = 1;
+
     // Dash burst state
     private float currentMaxSpeed;
     private float lastInputDirection;
@@ -17,13 +20,15 @@ public class PlayerController : MonoBehaviour
     public bool IsSliding { get; private set; }
     private float slideDirection;
 
-    // Cached component reference for slope detection
+    // Cached component references
     private PhysicsCheck physics;
+    private BoxCollider2D col2d;
 
     private void Awake()
     {
         Rb = GetComponent<Rigidbody2D>();
         physics = GetComponent<PhysicsCheck>();
+        col2d = GetComponent<BoxCollider2D>();
 
         if (baseMovementData != null)
             Data = baseMovementData.Clone();
@@ -57,16 +62,29 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>
     /// Frame-rate-independent horizontal movement using MoveTowards.
-    /// The old formula (speedDiff * rate * dt) reached max speed in 1 frame
-    /// because rate * dt = 50 * 0.02 = 1.0, making it instant convergence.
-    /// MoveTowards gives predictable, linear acceleration ramps.
+    /// Uses turnAroundAcceleration when input is opposite to current velocity
+    /// for snappy Celeste-style direction changes.
     /// </summary>
     public void MoveHorizontal(float input, float accel, float decel)
     {
+        float velX = Rb.linearVelocity.x;
         float targetSpeed = input * currentMaxSpeed;
-        float rate = Mathf.Abs(targetSpeed) > 0.01f ? accel : decel;
-        float newSpeedX = Mathf.MoveTowards(Rb.linearVelocity.x, targetSpeed, rate * Time.fixedDeltaTime);
+
+        bool isReversing = Mathf.Abs(input) > 0.1f
+                        && Mathf.Abs(velX) > 0.5f
+                        && Mathf.Sign(input) != Mathf.Sign(velX);
+
+        float rate;
+        if (isReversing)
+            rate = Data.turnAroundAcceleration;
+        else
+            rate = Mathf.Abs(targetSpeed) > 0.01f ? accel : decel;
+
+        float newSpeedX = Mathf.MoveTowards(velX, targetSpeed, rate * Time.fixedDeltaTime);
         Rb.linearVelocity = new Vector2(newSpeedX, Rb.linearVelocity.y);
+
+        if (Mathf.Abs(input) > 0.1f)
+            FacingDirection = (int)Mathf.Sign(input);
     }
 
     // =========================================================
@@ -267,6 +285,90 @@ public class PlayerController : MonoBehaviour
         {
             Rb.linearVelocity = new Vector2(Rb.linearVelocity.x, -currentSlideSpeed);
         }
+    }
+
+    // =========================================================
+    // Dash (Celeste)
+    // =========================================================
+
+    /// <summary>
+    /// Begin a Celeste-style dash in the given normalized 8-directional vector.
+    /// Zeroes gravity for the dash duration so the player travels in a straight line.
+    /// </summary>
+    public void ApplyDash(Vector2 direction)
+    {
+        Rb.gravityScale = 0f;
+        Rb.linearVelocity = direction * Data.dashSpeed;
+    }
+
+    /// <summary>
+    /// Re-apply dash velocity each FixedUpdate to resist any forces during the dash.
+    /// </summary>
+    public void HoldDashVelocity(Vector2 direction)
+    {
+        Rb.linearVelocity = direction * Data.dashSpeed;
+    }
+
+    /// <summary>
+    /// End the dash and restore normal gravity.
+    /// Pass preserveHorizontal=true for wavedash/dash-jump to keep horizontal speed.
+    /// </summary>
+    public void EndDash(bool preserveHorizontal = false)
+    {
+        Rb.gravityScale = Data.gravityScale;
+        if (preserveHorizontal)
+        {
+            // Let horizontal speed exceed normal cap temporarily (decays via UpdateDashBurst)
+            currentMaxSpeed = Mathf.Max(Data.moveSpeed, Mathf.Abs(Rb.linearVelocity.x));
+        }
+        else
+        {
+            float clampedX = Mathf.Clamp(Rb.linearVelocity.x, -Data.moveSpeed, Data.moveSpeed);
+            Rb.linearVelocity = new Vector2(clampedX, Rb.linearVelocity.y);
+            currentMaxSpeed = Data.moveSpeed;
+        }
+    }
+
+    // =========================================================
+    // Corner Correction
+    // =========================================================
+
+    /// <summary>
+    /// When the player's corner clips a ceiling edge during an upward jump,
+    /// nudge them horizontally up to <paramref name="range"/> units so they
+    /// slide past the corner instead of bonking their head.
+    /// Returns true if a correction was applied.
+    /// </summary>
+    public bool TryCornerCorrect(float range)
+    {
+        if (Rb.linearVelocity.y <= 0f) return false;
+        if (col2d == null || physics == null) return false;
+
+        Vector2 halfSize = col2d.size * 0.5f;
+        Vector2 center   = (Vector2)transform.position + col2d.offset;
+        LayerMask mask   = physics.GroundLayerMask;
+        float probeLen   = 0.15f;
+
+        bool centerHit = Physics2D.Raycast(center, Vector2.up, halfSize.y + probeLen, mask).collider != null;
+        if (!centerHit) return false;
+
+        bool leftHit  = Physics2D.Raycast(center + new Vector2(-halfSize.x + 0.02f, halfSize.y - 0.02f), Vector2.up, probeLen, mask).collider != null;
+        bool rightHit = Physics2D.Raycast(center + new Vector2( halfSize.x - 0.02f, halfSize.y - 0.02f), Vector2.up, probeLen, mask).collider != null;
+
+        if (leftHit && !rightHit)
+        {
+            // Right side is clear — nudge right
+            transform.position += new Vector3(range, 0f, 0f);
+            return true;
+        }
+        if (rightHit && !leftHit)
+        {
+            // Left side is clear — nudge left
+            transform.position -= new Vector3(range, 0f, 0f);
+            return true;
+        }
+
+        return false;
     }
 
     // =========================================================

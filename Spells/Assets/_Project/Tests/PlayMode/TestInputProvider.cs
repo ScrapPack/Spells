@@ -11,12 +11,15 @@ public class TestInputProvider : MonoBehaviour, IInputProvider
     public bool JumpPressed { get; set; }
     public bool JumpHeld { get; set; }
     public bool CrouchHeld { get; set; }
+    public bool DashPressed { get; set; }
+    public bool DashHeld { get; set; }
     public bool ShootPressed { get; set; }
     public bool ShootHeld { get; set; }
     public bool ParryPressed { get; set; }
     public Vector2 AimDirection { get; set; }
 
     public void ConsumeJump() => JumpPressed = false;
+    public void ConsumeDash() => DashPressed = false;
     public void ConsumeShoot() => ShootPressed = false;
     public void ConsumeParry() => ParryPressed = false;
 
@@ -45,12 +48,26 @@ public class TestInputProvider : MonoBehaviour, IInputProvider
         ShootHeld = true;
     }
 
+    public void PressDash()
+    {
+        DashPressed = true;
+        DashHeld = true;
+    }
+
+    public void ReleaseDash()
+    {
+        DashPressed = false;
+        DashHeld = false;
+    }
+
     public void Reset()
     {
         MoveInput = Vector2.zero;
         JumpPressed = false;
         JumpHeld = false;
         CrouchHeld = false;
+        DashPressed = false;
+        DashHeld = false;
         ShootPressed = false;
         ShootHeld = false;
         ParryPressed = false;

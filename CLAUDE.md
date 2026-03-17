@@ -15,7 +15,8 @@ Spells/                         # Repo root
 ├── GDD.md                      # Game Design Document (520 lines)
 ├── CLAUDE.md                   # This file
 ├── Specs/                      # Feature requirements specs
-│   └── BoxArenaScene.md        # Box arena scene spec
+│   ├── BoxArenaScene.md        # Box arena scene spec
+│   └── CelesteMovement.md      # Celeste-style movement spec
 └── Spells/                     # Unity project root
     └── Assets/
         ├── Scenes/
@@ -85,15 +86,16 @@ Scripts/
 ### Player — `Scripts/Player/`
 | File | Role |
 |------|------|
-| `PlayerController.cs` | Physics-based movement (move, jump, slide, wall-jump, wave-land, dash) |
-| `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal |
-| `PlayerInputHandler.cs` | Implements `IInputProvider` via Unity InputSystem |
+| `PlayerController.cs` | Physics-based movement (move, jump, slide, wall-jump, wave-land, dash, corner correction). `FacingDirection`, `ApplyDash()`, `EndDash()`, `TryCornerCorrect()` |
+| `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal / **Dash**. Owns `DashesRemaining`, `WallStamina`, `StartFreezeFrame()` |
+| `IInputProvider.cs` | Interface — includes `DashPressed`, `DashHeld`, `ConsumeDash()` |
+| `PlayerInputHandler.cs` | Implements `IInputProvider` via Unity InputSystem. Handles `OnDash(InputValue)` via Send Messages |
 | `ClassManager.cs` | Applies `ClassData` to player; initializes combat/movement; applies card modifiers |
 | `PlayerIdentity.cs` | Player ID + team |
 | `PlayerDeathHandler.cs` | Death events and feedback |
 | `TemporaryItemInventory.cs` | Manages runtime temporary items |
 
-Player states are separate files: `GroundedState.cs`, `AirborneState.cs`, `WallSlidingState.cs`, `HitstunState.cs`, `SurfaceTraversalState.cs`.
+Player states are separate files in `States/`: `GroundedState.cs`, `AirborneState.cs`, `WallSlidingState.cs`, `HitstunState.cs`, `SurfaceTraversalState.cs`, **`DashState.cs`**.
 
 > **Note:** The wall-slide state class is `WallSlidingState` (file: `WallSlidingState.cs`). The property on `PlayerStateMachine` is named `WallSlideState` (typed `WallSlidingState`). Don't confuse the two.
 
@@ -128,7 +130,7 @@ Player states are separate files: `GroundedState.cs`, `AirborneState.cs`, `WallS
 |-------|---------|
 | `ClassData` | Class definition: CombatData ref, projectile prefab, card pool tags, color/icon |
 | `CombatData` | HP, projectile speed/damage, knockback, parry window, iframes |
-| `MovementData` | Speed, acceleration, jump, gravity, wall slide, wave-land parameters |
+| `MovementData` | Speed, acceleration, turnaround accel, jump, gravity, wall slide/climb/stamina, wave-land, dash, corner correction parameters |
 | `BiomeData` | Biome structure rules: bounds, platform count/height, walls, hazards, visuals |
 | `ArenaLayoutData` | Output of procedural generation; list of placed arena pieces |
 | `ItemData` | Temporary item definition |
@@ -152,7 +154,7 @@ Player states are separate files: `GroundedState.cs`, `AirborneState.cs`, `WallS
 
 **SpellEffect Registry** — Cards with special behaviors instantiate a `SpellEffect` subclass at runtime via the registry. The hook pattern (OnApply/OnRemove/OnRoundStart/OnRoundEnd) enables complex stateful effects without touching core systems.
 
-**Input Abstraction** — `IInputProvider` interface decouples movement from input. `PlayerInputHandler` is the real implementation; `TestInputProvider` is the mock used in play-mode tests.
+**Input Abstraction** — `IInputProvider` interface decouples movement from input. `PlayerInputHandler` is the real implementation; `TestInputProvider` is the mock used in play-mode tests. Adding a new input (e.g. dash) requires changes to all three: the interface, handler, and test mock.
 
 **Procedural Generation Pipeline** — 6 phases: ground → features → spatial placement → connectivity → perturbation → spawn points. Feature weight tables control biome personality. Reachability is validated against player jump physics constants.
 
@@ -199,6 +201,23 @@ Play-mode tests use `TestInputProvider` (implements `IInputProvider`) to drive t
 - New classes: create `ClassData` + `CombatData` assets in `Data/Classes/` and `Data/Combat/`; no code changes needed unless adding a unique class ability.
 - All stat tuning (damage, speed, HP, parry window) is done in the ScriptableObject assets, not in code.
 - Feature requirements specs live in `Specs/` at the repo root.
+
+## Celeste Movement System
+
+Implemented via `Specs/CelesteMovement.md`. Key mechanics:
+
+| Mechanic | Implementation |
+|----------|---------------|
+| **8-dir dash** | `DashState.cs` — snaps input to 8 directions, zeroes gravity, holds velocity for `dashDuration`. 1 air charge refills on ground or wall-jump |
+| **Freeze frame** | `PlayerStateMachine.StartFreezeFrame(duration)` — pauses `Update`/`FixedUpdate` for a short hitstop at dash start |
+| **Dash-jump / wavedash** | Jump during `DashState` → `EndDash(preserveHorizontal:true)` + jump force. Emergent wavedash: diagonal-down dash → immediate jump |
+| **Turnaround acceleration** | `MoveHorizontal()` detects input opposite to velocity, substitutes `turnAroundAcceleration` for normal accel rate |
+| **Corner correction** | `TryCornerCorrect()` in `PlayerController` — called on every jump; nudges player past ceiling corners |
+| **Wall climb stamina** | `WallStamina` on `PlayerStateMachine` — drains while sliding, 2× while climbing up, refills on ground |
+| **Wall grab (no hold)** | `AirborneState` no longer requires holding toward wall — any wall contact (not holding away, stamina > 0) triggers `WallSlidingState` |
+| **Wall-jump refills dash** | `WallSlidingState` resets `DashesRemaining` on wall-jump |
+
+> **Required Unity setup:** Add a **"Dash"** action (Button type) to your Input Action Asset mapped to `Shift` / South gamepad button. `PlayerInputHandler` receives it via `OnDash` Send Messages automatically.
 
 ## Runtime Builder Pattern
 

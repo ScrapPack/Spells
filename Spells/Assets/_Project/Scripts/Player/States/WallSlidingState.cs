@@ -5,10 +5,11 @@ public class WallSlidingState : IPlayerState
     private PlayerStateMachine ctx;
     private float slideTimer;
 
-    // Grace period: allow player to release toward-wall briefly without detaching,
-    // giving time to change direction and press jump for a wall jump.
+    // Grace period for neutral input: lets the player briefly release toward-wall
+    // to reposition their thumb for a wall-jump without immediately detaching.
+    // Actively pushing AWAY detaches immediately (no grace).
     private float wallStickTimer;
-    private const float WALL_STICK_DURATION = 0.05f; // ~3 frames at 60fps
+    private const float WALL_STICK_DURATION = 0.05f; // ~3 frames at 60 fps
 
     public void Enter(PlayerStateMachine ctx)
     {
@@ -27,22 +28,43 @@ public class WallSlidingState : IPlayerState
 
     public void Execute()
     {
-        // Wall jump — always check first, even during wall-stick grace period
+        // Dash — can dash out of wall slide (refills on wall-jump by design)
+        if (ctx.Input.DashPressed && ctx.DashesRemaining > 0)
+        {
+            ctx.ChangeState(ctx.DashState);
+            return;
+        }
+
+        // Wall jump — always check first so jump timing isn't affected by detach logic
         if (ctx.Input.JumpPressed)
         {
             ctx.Input.ConsumeJump();
+            // Wall-jump refills the air dash charge (Celeste behavior)
+            ctx.DashesRemaining = ctx.Controller.Data.maxAirDashes;
             ctx.Controller.ApplyWallJump(ctx.Physics.WallDirection);
             ctx.WallJumpLockoutTimer = ctx.Controller.Data.wallJumpLockoutTime;
             ctx.ChangeState(ctx.AirborneState);
             return;
         }
 
-        // Released wall (stopped holding toward it) — use grace timer
+        // Detach conditions:
+        //   1. No longer touching the wall
+        //   2. Stamina depleted
+        //   3. Actively pushing AWAY from wall (immediate detach — no grace)
         float inputX = ctx.Input.MoveInput.x;
-        bool holdingTowardWall = (ctx.Physics.WallDirection == 1 && inputX > 0.1f)
-                              || (ctx.Physics.WallDirection == -1 && inputX < -0.1f);
+        bool holdingAway = (ctx.Physics.WallDirection == 1 && inputX < -0.3f)
+                        || (ctx.Physics.WallDirection == -1 && inputX > 0.3f);
+        bool holdingToward = (ctx.Physics.WallDirection == 1 && inputX > 0.3f)
+                          || (ctx.Physics.WallDirection == -1 && inputX < -0.3f);
 
-        if (!holdingTowardWall || !ctx.Physics.IsTouchingWall)
+        if (!ctx.Physics.IsTouchingWall || holdingAway || ctx.WallStamina <= 0f)
+        {
+            ctx.ChangeState(ctx.AirborneState);
+            return;
+        }
+
+        // Brief grace for neutral input: allows repositioning thumb to press jump
+        if (!holdingToward)
         {
             wallStickTimer += Time.deltaTime;
             if (wallStickTimer >= WALL_STICK_DURATION)
@@ -53,7 +75,6 @@ public class WallSlidingState : IPlayerState
         }
         else
         {
-            // Reset grace timer while still holding toward wall
             wallStickTimer = 0f;
         }
 
@@ -69,22 +90,34 @@ public class WallSlidingState : IPlayerState
     {
         var data = ctx.Controller.Data;
 
-        // Accelerate slide over time: grip weakens the longer you hold
-        slideTimer += Time.fixedDeltaTime;
-        float t = Mathf.Clamp01(slideTimer / data.wallSlideAccelTime);
+        // Climb up: holding up while stamina remains
+        bool holdingUp = ctx.Input.MoveInput.y > 0.5f;
+        if (holdingUp && ctx.WallStamina > 0f)
+        {
+            ctx.Controller.Rb.linearVelocity = new Vector2(ctx.Controller.Rb.linearVelocity.x, data.wallClimbSpeed);
+            // Climbing drains stamina at 2x the normal slide rate
+            ctx.WallStamina -= data.wallStaminaDrainRate * 2f * Time.fixedDeltaTime;
+        }
+        else
+        {
+            // Normal slide: accelerate from min to max slide speed over time
+            slideTimer += Time.fixedDeltaTime;
+            float t = Mathf.Clamp01(slideTimer / data.wallSlideAccelTime);
+            float easedT = t * t; // Ease-in: starts slow, accelerates
 
-        // Ease-in curve: starts slow, accelerates faster
-        float easedT = t * t;
+            float clampedMax = Mathf.Min(data.wallSlideSpeedMax, data.maxFallSpeed);
+            float currentSlideSpeed = Mathf.Lerp(data.wallSlideSpeedMin, clampedMax, easedT);
 
-        // Cap wall slide max at maxFallSpeed so it never exceeds normal falling
-        float clampedMax = Mathf.Min(data.wallSlideSpeedMax, data.maxFallSpeed);
-        float currentSlideSpeed = Mathf.Lerp(data.wallSlideSpeedMin, clampedMax, easedT);
+            ctx.Controller.ClampWallSlideVelocity(currentSlideSpeed);
 
-        ctx.Controller.ClampWallSlideVelocity(currentSlideSpeed);
+            // Scale gravity reduction based on grip freshness
+            float gravityFactor = Mathf.Lerp(0.1f, 0.8f, easedT);
+            ctx.Controller.SetGravityScale(data.gravityScale * gravityFactor);
 
-        // Scale gravity reduction based on how fresh the grip is
-        float gravityFactor = Mathf.Lerp(0.1f, 0.8f, easedT);
-        ctx.Controller.SetGravityScale(data.gravityScale * gravityFactor);
+            // Drain stamina while sliding
+            ctx.WallStamina -= data.wallStaminaDrainRate * Time.fixedDeltaTime;
+            ctx.WallStamina = Mathf.Max(0f, ctx.WallStamina);
+        }
     }
 
     public void Exit()

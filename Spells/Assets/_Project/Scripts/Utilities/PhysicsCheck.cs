@@ -23,6 +23,9 @@ public class PhysicsCheck : MonoBehaviour
     public int WallDirection { get; private set; }
     public bool IsOnCeiling { get; private set; }
 
+    /// <summary>The layer mask used for ground/platform detection. Exposed for corner correction.</summary>
+    public LayerMask GroundLayerMask => groundLayer;
+
     /// <summary>
     /// The normal of the ground surface directly below the player.
     /// (0,1) on flat ground, angled on slopes. Zero if not grounded.

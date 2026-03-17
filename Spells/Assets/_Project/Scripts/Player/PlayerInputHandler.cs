@@ -14,6 +14,10 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
     public bool JumpHeld { get; private set; }
     public bool CrouchHeld { get; private set; }
 
+    // Dash inputs
+    public bool DashPressed { get; private set; }
+    public bool DashHeld { get; private set; }
+
     // Combat inputs
     public bool ShootPressed { get; private set; }
     public bool ShootHeld { get; private set; }
@@ -23,6 +27,11 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
     public void ConsumeJump()
     {
         JumpPressed = false;
+    }
+
+    public void ConsumeDash()
+    {
+        DashPressed = false;
     }
 
     public void ConsumeShoot()
@@ -68,6 +77,20 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
         else
         {
             ShootHeld = false;
+        }
+    }
+
+    // Called by PlayerInput via Send Messages when Dash action fires
+    public void OnDash(InputValue value)
+    {
+        if (value.isPressed)
+        {
+            DashPressed = true;
+            DashHeld = true;
+        }
+        else
+        {
+            DashHeld = false;
         }
     }
 

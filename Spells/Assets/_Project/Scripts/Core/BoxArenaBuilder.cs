@@ -72,11 +72,11 @@ public class BoxArenaBuilder : MonoBehaviour
         // Floor — top surface at Y=0
         CreateBox("Floor",     arena.transform, new Vector3(0, -t / 2f, 0),          new Vector3(arenaWidth + t * 2f, t, 1f), floorColor);
 
-        // Left wall — right face at X = -hw
-        CreateBox("Wall_Left", arena.transform, new Vector3(-hw - t / 2f, hh / 2f, 0), new Vector3(t, arenaHeight + t * 2f, 1f), wallColor, zeroFriction: true);
+        // Left wall — right face at X = -hw (must be "Wall" layer for IsTouchingWall detection)
+        CreateBox("Wall_Left", arena.transform, new Vector3(-hw - t / 2f, hh / 2f, 0), new Vector3(t, arenaHeight + t * 2f, 1f), wallColor, zeroFriction: true, layerName: "Wall");
 
-        // Right wall — left face at X = +hw
-        CreateBox("Wall_Right",arena.transform, new Vector3( hw + t / 2f, hh / 2f, 0), new Vector3(t, arenaHeight + t * 2f, 1f), wallColor, zeroFriction: true);
+        // Right wall — left face at X = +hw (must be "Wall" layer for IsTouchingWall detection)
+        CreateBox("Wall_Right",arena.transform, new Vector3( hw + t / 2f, hh / 2f, 0), new Vector3(t, arenaHeight + t * 2f, 1f), wallColor, zeroFriction: true, layerName: "Wall");
 
         // Ceiling — bottom surface at Y = arenaHeight
         CreateBox("Ceiling",   arena.transform, new Vector3(0, arenaHeight + t / 2f, 0), new Vector3(arenaWidth + t * 2f, t, 1f), ceilingColor);
