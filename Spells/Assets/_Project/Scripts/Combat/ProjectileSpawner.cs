@@ -26,6 +26,7 @@ public class ProjectileSpawner : MonoBehaviour
     private CombatData combatData;
     private PlayerIdentity identity;
     private IInputProvider input;
+    private BoxCollider2D col;
     private float fireCooldownTimer;
     private bool usesAmmo;
 
@@ -46,6 +47,7 @@ public class ProjectileSpawner : MonoBehaviour
     {
         identity = GetComponent<PlayerIdentity>();
         input = GetComponent<IInputProvider>();
+        col = GetComponent<BoxCollider2D>();
 
         if (identity == null) Debug.LogError("ProjectileSpawner: No PlayerIdentity found!", this);
     }
@@ -74,29 +76,34 @@ public class ProjectileSpawner : MonoBehaviour
             return;
         }
 
-        // Aim direction: use input aim or face direction
-        Vector2 aimDir = input.AimDirection;
-
-        // Mouse gives screen-space position — convert to world-space direction from player
-        if (aimDir.sqrMagnitude > 100f && Camera.main != null)
-        {
-            Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(aimDir.x, aimDir.y, 0f));
-            aimDir = ((Vector2)worldPos - (Vector2)transform.position).normalized;
-        }
+        // Aim direction: right stick (gamepad) or WASD/move input (keyboard).
+        // Mouse gives screen-space pixel coords (sqrMagnitude >> 100) — skip it and use move input.
+        Vector2 aimDir;
+        if (input.AimDirection.sqrMagnitude > 0.01f && input.AimDirection.sqrMagnitude <= 1.5f)
+            aimDir = input.AimDirection; // right stick
+        else
+            aimDir = input.MoveInput;   // WASD or left stick
 
         if (aimDir.sqrMagnitude < 0.01f)
         {
-            // Default: face direction based on movement or last facing
-            float facing = Mathf.Sign(input.MoveInput.x);
-            if (Mathf.Abs(facing) < 0.1f) facing = 1f;
+            // No directional input — fire in the direction the player is facing
+            var controller = GetComponent<PlayerController>();
+            float facing = controller != null ? controller.FacingDirection : 1f;
             aimDir = new Vector2(facing, 0f);
         }
 
-        // Spawn position
-        Vector2 spawnPos = (Vector2)transform.position + new Vector2(
-            muzzleOffset.x * Mathf.Sign(aimDir.x),
-            muzzleOffset.y
-        );
+        aimDir = aimDir.normalized;
+
+        // Spawn position: use col.bounds (world-space AABB) so the center and extents
+        // are correct even when the player is flipped via localScale.x = -1.
+        // Project extents onto aim direction to find the surface point, then add
+        // the projectile radius + a small gap so the circle never overlaps the hurtbox.
+        Vector2 center = col != null ? (Vector2)col.bounds.center : (Vector2)transform.position;
+        Vector2 half   = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
+        float clearance = Mathf.Abs(aimDir.x) * half.x
+                        + Mathf.Abs(aimDir.y) * half.y
+                        + combatData.projectileRadius + 0.1f;
+        Vector2 spawnPos = center + aimDir * clearance;
 
         // Create projectile
         GameObject projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
@@ -104,6 +111,7 @@ public class ProjectileSpawner : MonoBehaviour
 
         if (proj != null)
         {
+            proj.CanHitOwner = true;
             proj.Initialize(
                 identity.PlayerID,
                 aimDir,
