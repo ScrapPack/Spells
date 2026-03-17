@@ -12,33 +12,36 @@ The full design vision lives in [GDD.md](GDD.md).
 
 ```
 Spells/                         # Repo root
-├── GDD.md                      # Game Design Document (520 lines)
+├── GDD.md                      # Game Design Document
 ├── CLAUDE.md                   # This file
+├── README.md                   # Build & setup instructions
 ├── Specs/                      # Feature requirements specs
 │   ├── BoxArenaScene.md        # Box arena scene spec
 │   ├── CelesteMovement.md      # Celeste-style movement spec
+│   ├── CoyoteTimeShortHop.md   # Coyote time + short hop spec
 │   └── ManagerRemoval.md       # Removal of Core manager layer spec
 └── Spells/                     # Unity project root
     └── Assets/
         ├── Scenes/
         │   ├── SampleScene.unity
-        │   └── CombatTestArena.unity
+        │   └── CombatTestArena.unity   # Active development scene
         ├── Settings/
         └── _Project/           # All game content lives here
             ├── Art/Sprites/
             ├── Data/           # ScriptableObject assets
             │   ├── Biomes/     # 5 biome theme assets
-            │   ├── Cards/      # 18+ PowerCardData assets
+            │   ├── Cards/      # PowerCardData assets
             │   ├── Classes/    # 8 ClassData assets
             │   ├── Combat/     # Per-class CombatData assets
             │   ├── Movement/   # SharedMovement asset
             │   └── Settings/   # DefaultGameSettings
             ├── Input/
+            │   └── PlayerInputActions.inputactions
             ├── Prefabs/
-            │   ├── Player/
-            │   ├── Projectiles/
+            │   ├── Player/     # PlayerCharacter.prefab
+            │   ├── Projectiles/# WizardBolt.prefab, WarriorAxe.prefab
             │   └── Environment/
-            ├── Scripts/        # 120 C# files (~15,600 LOC)
+            ├── Scripts/        # C# source
             └── Tests/
                 ├── EditMode/
                 └── PlayMode/
@@ -50,13 +53,16 @@ Spells/                         # Repo root
 
 ```
 Scripts/
-├── Core/           # Match/round/level management
+├── Core/           # Scene builders and arena tools
 ├── Player/         # Controller, state machine, class system
+│   └── States/     # One file per movement state
 ├── Combat/         # Health, parry, projectiles, behaviors, status effects
+│   ├── Behaviors/  # Projectile behavior components
+│   └── Abilities/  # Class ability components
 ├── Cards/          # Power card data, inventory, SpellEffect system
-│   └── Effects/    # 18+ individual SpellEffect implementations
-├── Data/           # ScriptableObject definitions (ClassData, CombatData, etc.)
-├── UI/             # All UI controllers (Draft, HUD, CharSelect, Scoreboard…)
+│   └── Effects/    # SpellEffect implementations
+├── Data/           # ScriptableObject definitions
+├── UI/             # All UI controllers
 ├── Camera/         # MultiTargetCamera
 ├── Environment/    # Platforms, hazards, chests, destructibles
 ├── Items/          # Temporary item behaviors and registry
@@ -69,47 +75,62 @@ Scripts/
 
 ## Core Systems
 
-### Core Scene Builders — `Scripts/Core/`
+### Scene Builders — `Scripts/Core/`
+
+The match loop lives **inline** inside the scene builder — there are no external manager objects.
+
 | File | Role |
 |------|------|
-| `BoxArenaBuilder.cs` | Self-contained 2-player match runner — builds geometry, spawns players, owns round/match/draft loop inline. No external managers required |
-| `TestArenaBuilder.cs` | Movement-test scene builder — static + procedural arena paths, handles `OnPlayerJoined` inline via SendMessages |
+| `BoxArenaBuilder.cs` | Self-contained 2-player match runner. Builds geometry and kill zones at runtime, spawns players via `PlayerInput.Instantiate`, owns the full round/match/draft loop inline |
+| `TestArenaBuilder.cs` | Movement-test scene — no match logic. Handles `OnPlayerJoined` inline via SendMessages |
 | `ProceduralLevelGenerator.cs` | 6-phase compositional pipeline for arena generation |
 | `ModularArenaBuilder.cs` | Builds arenas from `ArenaLayoutData` using prefab pieces |
 | `LevelValidator.cs` | Reachability validation for generated layouts |
 | `CombatAnalytics.cs` | Event-driven analytics utility |
 
 ### Player — `Scripts/Player/`
+
 | File | Role |
 |------|------|
 | `PlayerController.cs` | Physics-based movement (move, jump, slide, wall-jump, wave-land, dash, corner correction). `FacingDirection`, `ApplyDash()`, `EndDash()`, `TryCornerCorrect()` |
-| `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal / **Dash**. Owns `DashesRemaining`, `WallStamina`, `LastWallDirection`, `StartFreezeFrame()` |
-| `IInputProvider.cs` | Interface — includes `DashPressed`, `DashHeld`, `ConsumeDash()` |
-| `PlayerInputHandler.cs` | Implements `IInputProvider` via Unity InputSystem. Handles `OnDash(InputValue)` via Send Messages |
+| `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal / Dash. Owns `DashesRemaining`, `WallStamina`, `LastWallDirection`, `StartFreezeFrame()` |
+| `IInputProvider.cs` | Interface — `MoveInput`, `JumpPressed`, `JumpHeld`, `DashPressed`, `ShootPressed`, `AimDirection`, `CrouchHeld` and their Consume methods |
+| `PlayerInputHandler.cs` | Implements `IInputProvider` via Unity Input System Send Messages |
 | `ClassManager.cs` | Applies `ClassData` to player; initializes combat/movement; applies card modifiers |
 | `PlayerIdentity.cs` | Player ID + team |
-| `PlayerDeathHandler.cs` | Death events and feedback |
+| `PlayerDeathHandler.cs` | Death events, feedback, `ResetForRound()` |
+| `PlayerVisualFeedback.cs` | Visual effects on hit, death, etc. |
 | `TemporaryItemInventory.cs` | Manages runtime temporary items |
 
-Player states are separate files in `States/`: `GroundedState.cs`, `AirborneState.cs`, `WallSlidingState.cs`, `HitstunState.cs`, `SurfaceTraversalState.cs`, **`DashState.cs`**.
+Player states (`States/`): `GroundedState`, `AirborneState`, `WallSlidingState`, `HitstunState`, `SurfaceTraversalState`, `DashState`.
 
-> **Note:** The wall-slide state class is `WallSlidingState` (file: `WallSlidingState.cs`). The property on `PlayerStateMachine` is named `WallSlideState` (typed `WallSlidingState`). Don't confuse the two.
+> **Note:** The wall-slide state class is `WallSlidingState`. The property on `PlayerStateMachine` is `WallSlideState` (typed `WallSlidingState`).
 
 ### Combat — `Scripts/Combat/`
+
 | File | Role |
 |------|------|
 | `HealthSystem.cs` | HP, damage, iframes, knockback, heal, revive |
 | `ParrySystem.cs` | 6-8 frame timing window; reflects projectile; whiff recovery |
+| `ProjectileSpawner.cs` | Fires projectiles on Shoot input (F key / buttonEast). Direction = right stick or MoveInput (WASD). `CanHitOwner = true` — friendly fire enabled. Spawn point cleared past player's BoxCollider2D extents |
+| `Projectile.cs` | Base projectile: movement, lifetime, bouncing, self-damage. SerializeField overrides: `lifetimeMultiplier` (default 5×), `bulletGravity` (default 0.15), `bulletBounces` (default 3) |
 | `ProjectileSpawner.cs` | Fires projectiles; ammo system (Warrior axes); cooldown |
-| `Projectile.cs` | Base projectile: hit detection, reflection |
+| `ProjectileTrail.cs` | Visual trail on projectiles |
+| `ClassAbility.cs` | Per-class special ability base |
+| `CombatEventRouter.cs` | Routes combat events between systems |
+| `SpawnProtection.cs` | Iframes on round start |
+| `MonsterEntity.cs` | PvE enemy |
+| `SpiritEntity.cs` | Spirit summon (Shaman/SpiritBond) |
+| `TotemEntity.cs` | Totem summon (Shaman/AncestralTotem) |
+| `PotionZone.cs` / `PotionZoneSpawner.cs` | Alchemist potion area |
+| `HexMarkStatus.cs` / `PoisonStatus.cs` | Persistent status effects |
 
-**Projectile behaviors** (`Combat/Behaviors/`): `HomingBehavior`, `RicochetBehavior`, `ExplosiveBehavior`, `SplitBehavior`, `MagneticReturnBehavior`, `AmbushProjectileBehavior`
+**Projectile behaviors** (`Combat/Behaviors/`): `HomingBehavior`, `RicochetBehavior`, `ExplosiveBehavior`, `SplitBehavior`, `MagneticReturnBehavior`, `AmbushProjectileBehavior`, `LuckyBounceBehavior`, `DarkTetherBehavior`
 
-**Status effects / modifiers**: `ProjectileModifier`, `ProjectileModifierSystem`, `HexMarkStatus`
-
-**Other**: `ClassAbility`, `SpawnProtection`, `CombatEventRouter`, `PotionZone`, `PotionZoneSpawner`, `MonsterEntity`
+**Modifier system**: `ProjectileModifier`, `ProjectileModifierSystem`
 
 ### Power Card System — `Scripts/Cards/`
+
 | File | Role |
 |------|------|
 | `PowerCardData.cs` | Card definition: positive/negative effects, tier, stacking rules |
@@ -119,14 +140,15 @@ Player states are separate files in `States/`: `GroundedState.cs`, `AirborneStat
 | `SpellEffectRegistry.cs` | Instantiates and manages `SpellEffect` lifecycle |
 
 **Implemented SpellEffects** (`Cards/Effects/`):
-`BloodPactEffect`, `LichFormEffect`, `VampiricEffect`, `SmokeBombEffect`, `LuckyBounceEffect`, `BerserkerEffect`, `HeavyThrowEffect`, `MagneticReturnEffect`, `SoulSiphonEffect`, `HexMarkEffect`, `SpiritBondEffect`, `StickyBrewEffect`, `VolatileMixEffect`, `AmbushEffect`, `SecondWindEffect`, `DarkTetherEffect`, `VenomDartEffect`, `AncestralTotemEffect`
+`AmbushEffect`, `AncestralTotemEffect`, `BerserkerEffect`, `BloodPactEffect`, `DarkTetherEffect`, `GlassCannonEffect`, `HeavyThrowEffect`, `HexMarkEffect`, `JackpotEffect`, `LichFormEffect`, `LuckyBounceEffect`, `MagneticReturnEffect`, `SecondWindEffect`, `SmokeBombEffect`, `SoulSiphonEffect`, `SpiritBondEffect`, `StickyBrewEffect`, `VampiricEffect`, `VenomDartEffect`, `VolatileMixEffect`
 
 ### Data ScriptableObjects — `Scripts/Data/`
+
 | Class | Purpose |
 |-------|---------|
 | `ClassData` | Class definition: CombatData ref, projectile prefab, card pool tags, color/icon |
-| `CombatData` | HP, projectile speed/damage, knockback, parry window, iframes |
-| `MovementData` | Speed, acceleration, turnaround accel, jump, gravity, wall slide/climb/stamina, wave-land, dash, corner correction parameters |
+| `CombatData` | HP, projectile speed/damage/lifetime/radius/gravity/bounces, knockback, parry window, iframes |
+| `MovementData` | Speed, acceleration, turnaround accel, jump, gravity, wall slide/climb/stamina, wave-land, dash, corner correction, fast fall parameters |
 | `BiomeData` | Biome structure rules: bounds, platform count/height, walls, hazards, visuals |
 | `ArenaLayoutData` | Output of procedural generation; list of placed arena pieces |
 | `ItemData` | Temporary item definition |
@@ -134,25 +156,29 @@ Player states are separate files in `States/`: `GroundedState.cs`, `AirborneStat
 | `GameSettings` | Global settings |
 | `AudioEvent` | Sound event definition |
 
+### Camera — `Scripts/Camera/`
+
+`MultiTargetCamera` — smooth orthographic camera that tracks all registered targets. Projectile tracking is enabled by default (`trackProjectiles = true`): live `Projectile` instances are found each `LateUpdate` via `FindObjectsByType` and folded into the bounds. `SetZoomProgress(0–1)` drives round-end compression.
+
 ---
 
 ## Architecture Patterns
 
-**Data-Driven Design** — All combat/movement tuning values are ScriptableObject assets. Adding a new class means creating data assets, not changing code.
+**Data-Driven Design** — All combat/movement tuning is in ScriptableObject assets. Adding a new class = create data assets, no code changes.
 
-**Composition over Inheritance** — Players are a flat composition of MonoBehaviours (no deep hierarchies). Systems communicate via events and interfaces.
+**Composition over Inheritance** — Players are a flat composition of MonoBehaviours.
 
-**State Machine** — `PlayerStateMachine` manages movement states.
+**Inline Match Loop** — `BoxArenaBuilder` owns the full round/match/draft flow with no external manager dependencies. All state is local fields.
 
-**Event-Driven** — UnityEvents decouple systems: `OnRoundEnd`, `OnDeath`, `OnCardAdded`, `OnParrySuccess`, etc. Analytics listens to events rather than being called directly.
+**State Machine** — `PlayerStateMachine` manages movement states with pre-allocated plain C# state objects.
 
-**Modifier System** — `StatModifier` applies numeric deltas to `CombatData`/`MovementData`. Card stacking multiplies modifiers (e.g., BloodPact ×3 = 3× HP cost).
+**Event-Driven** — UnityEvents decouple systems: `OnDeath`, `OnCardAdded`, `OnParrySuccess`, etc.
 
-**SpellEffect Registry** — Cards with special behaviors instantiate a `SpellEffect` subclass at runtime via the registry. The hook pattern (OnApply/OnRemove/OnRoundStart/OnRoundEnd) enables complex stateful effects without touching core systems.
+**Modifier System** — `StatModifier` applies numeric deltas to `CombatData`/`MovementData`. Card stacking multiplies modifiers.
 
-**Input Abstraction** — `IInputProvider` interface decouples movement from input. `PlayerInputHandler` is the real implementation; `TestInputProvider` is the mock used in play-mode tests. Adding a new input (e.g. dash) requires changes to all three: the interface, handler, and test mock.
+**SpellEffect Registry** — Cards with special behaviors instantiate a `SpellEffect` subclass at runtime. Hook pattern (OnApply/OnRemove/OnRoundStart/OnRoundEnd) enables stateful effects without touching core systems.
 
-**Procedural Generation Pipeline** — 6 phases: ground → features → spatial placement → connectivity → perturbation → spawn points. Feature weight tables control biome personality. Reachability is validated against player jump physics constants.
+**Input Abstraction** — `IInputProvider` decouples movement from input. `PlayerInputHandler` is the real implementation; `TestInputProvider` is the play-mode test mock. Adding a new input requires changes to all three.
 
 ---
 
@@ -167,7 +193,7 @@ Player states are separate files in `States/`: `GroundedState.cs`, `AirborneStat
 | Alchemist | Potion zones; card pool: StickyBrew, VolatileMix, TransmuteGround, PhilosophersStone |
 | Rogue | Back-attack bonuses; card pool: Ambush, SmokeBomb, FanOfKnives, ShadowStep |
 | Witch Doctor | Debuffs/curses; card pool: VenomDart, HexMark, PuppetStrings, VoodooDoll |
-| Jester | Chaos/bounce; card pool: LuckyBounce, Copycat, Jackpot, Shuffle |
+| Jester | Chaos/bounce; card pool: LuckyBounce, Jackpot, GlassCannon, Shuffle |
 
 ---
 
@@ -192,11 +218,13 @@ Play-mode tests use `TestInputProvider` (implements `IInputProvider`) to drive t
 ## Key Conventions
 
 - ScriptableObject assets live in `_Project/Data/` mirroring their script folder structure.
-- Prefabs live in `_Project/Prefabs/` organized by type (Player, Projectiles, Environment).
-- New SpellEffects: extend `SpellEffect`, register in `SpellEffectRegistry`, create a matching `PowerCardData` asset in `Data/Cards/`.
-- New classes: create `ClassData` + `CombatData` assets in `Data/Classes/` and `Data/Combat/`; no code changes needed unless adding a unique class ability.
-- All stat tuning (damage, speed, HP, parry window) is done in the ScriptableObject assets, not in code.
-- Feature requirements specs live in `Specs/` at the repo root.
+- Prefabs live in `_Project/Prefabs/` organized by type.
+- New SpellEffects: extend `SpellEffect`, register in `SpellEffectRegistry`, create a matching `PowerCardData` asset.
+- New classes: create `ClassData` + `CombatData` assets — no code changes needed unless adding a unique class ability.
+- All stat tuning (damage, speed, HP, parry window) is done in ScriptableObject assets, not in code.
+- Feature requirement specs live in `Specs/` at the repo root.
+
+---
 
 ## Celeste Movement System
 
@@ -204,37 +232,55 @@ Implemented via `Specs/CelesteMovement.md`. Key mechanics:
 
 | Mechanic | Implementation |
 |----------|---------------|
-| **8-dir dash** | `DashState.cs` — snaps input to 8 directions, zeroes gravity, holds velocity for `dashDuration`. 1 air charge refills on ground or wall-jump |
-| **Freeze frame** | `PlayerStateMachine.StartFreezeFrame(duration)` — pauses `Update`/`FixedUpdate` for a short hitstop at dash start |
+| **8-dir dash** | `DashState` — snaps input to 8 directions, zeroes gravity, holds velocity for `dashDuration`. 1 air charge; refills on landing or wall-jump |
+| **Freeze frame** | `PlayerStateMachine.StartFreezeFrame(duration)` — pauses Update/FixedUpdate for hitstop at dash start |
 | **Dash-jump / wavedash** | Jump during `DashState` → `EndDash(preserveHorizontal:true)` + jump force. Emergent wavedash: diagonal-down dash → immediate jump |
-| **Short hop / variable height** | `AirborneState` checks `!jumpCut && !JumpHeld && vy > 0` every frame — calls `CutJumpVelocity()` which multiplies vy by `jumpCutMultiplier` (default 0.4). `jumpCut` flag prevents double-cut. Tune `jumpCutMultiplier` in `MovementData` |
-| **Turnaround acceleration** | `MoveHorizontal()` detects input opposite to velocity, substitutes `turnAroundAcceleration` for normal accel rate |
-| **Dash startup burst** | `UpdateDashBurst()` in `PlayerController` — kicks an instant velocity on standstill start or direction reverse; `currentMaxSpeed` briefly overshoots then decays via `dashDecayRate`. Tune `dashBurstMultiplier` + `dashStillThreshold` in `MovementData` |
-| **Corner correction** | `TryCornerCorrect()` in `PlayerController` — called on every jump; nudges player past ceiling corners |
-| **Wall climb stamina** | `WallStamina` on `PlayerStateMachine` — drains while sliding, 2× while climbing up, refills on ground |
-| **Wall grab (no hold)** | `AirborneState` no longer requires holding toward wall — any wall contact (not holding away, stamina > 0) triggers `WallSlidingState` |
+| **Short hop / variable height** | `AirborneState` checks `!jumpCut && !JumpHeld && vy > 0` each frame → `CutJumpVelocity()` multiplies vy by `jumpCutMultiplier` (default 0.4). `jumpCut` flag prevents double-cut. Jump action uses `Press(behavior=2)` (PressAndRelease) so `JumpHeld` correctly goes false on release |
+| **Fast fall** | Holding down while `vy <= 0` → `MoveTowards` toward `-fastFallMaxSpeed` at rate `fastFallGravityMultiplier × gravityScale × 3` each FixedUpdate |
+| **Turnaround acceleration** | `MoveHorizontal()` detects input opposite to velocity, substitutes `turnAroundAcceleration` |
+| **Dash startup burst** | `UpdateDashBurst()` — instant velocity kick from standstill; `currentMaxSpeed` overshoots then decays via `dashDecayRate` |
+| **Corner correction** | `TryCornerCorrect()` — called on every jump; nudges player past ceiling corners |
+| **Wall climb stamina** | `WallStamina` — drains while sliding, 2× climbing up, refills on ground |
+| **Wall grab (no hold)** | Any wall contact (not holding away, stamina > 0, not rising fast) triggers `WallSlidingState` |
 | **Wall-jump refills dash** | `WallSlidingState` resets `DashesRemaining` on wall-jump |
-| **Wall coyote time** | `WallSlidingState` sets `CoyoteTimer` + `LastWallDirection` on detach. In `AirborneState.Execute`, coyote wall-jump is checked before ground coyote: `CoyoteTimer > 0 && LastWallDirection != 0` → `ApplyWallJump(LastWallDirection)`, refills dash, sets lockout. `LastWallDirection` cleared on ground landing (`GroundedState.Enter`) |
-| **Fast fall** | `AirborneState.FixedExecute` — holding down while `vy <= 0` accelerates toward `-fastFallMaxSpeed` using `MoveTowards` at rate `fastFallGravityMultiplier × gravityScale × 3`. Normal gravity still applies; no special gravity multiplier |
+| **Wall coyote time** | `WallSlidingState` sets `CoyoteTimer` + `LastWallDirection` on detach. `AirborneState` checks `CoyoteTimer > 0 && LastWallDirection != 0` before ground coyote → `ApplyWallJump`, refills dash, sets lockout. `LastWallDirection` cleared on landing |
 
-> **Required Unity setup:** Add a **"Dash"** action (Button type) to your Input Action Asset mapped to `Shift` / South gamepad button. `PlayerInputHandler` receives it via `OnDash` Send Messages automatically.
+> **Required Unity setup:** The Jump action must use `"Press(behavior=2)"` interaction (PressAndRelease) in the Input Action Asset so `JumpHeld` correctly reads false on release. The Dash action needs a **"Dash"** Button action mapped to `LeftShift` / South gamepad button.
 
-## Runtime Builder Pattern
+---
 
-`BoxArenaBuilder` and `TestArenaBuilder` build their scenes entirely at runtime — no scene hierarchy setup required. There are no external manager dependencies.
+## Runtime Builder Pattern — `BoxArenaBuilder`
 
-### BoxArenaBuilder
-Owns the full 2-player match loop inline:
-- `Start()` builds geometry, spawns players via `PlayerInput.Instantiate()`, creates `SpellEffectRegistry`, then starts the first round.
-- **Player spawning**: uses `PlayerInput.Instantiate(prefab, playerIndex, controlScheme, -1, Keyboard.current)`. P1 gets scheme `"KeyboardWASD"`, P2 gets `"KeyboardArrows"`. Schemes are defined in `PlayerInputActions.inputactions`.
-- **Round loop**: `StartRound()` → subscribes to `HealthSystem.OnDeath` → `OnPlayerDied()` → `EndRound()` → `AutoPickCard()` for losers → `DelayedNextRound()` coroutine → `StartRound()`.
-- `AutoPickCard(playerIndex)` draws randomly from the player's assigned `PowerCardData[]` pool and calls `CardInventory.AddCard()`.
-- `EndMatch(winnerIndex)` fires when a player reaches `winsToWinMatch` round wins.
-- `SpellEffectRegistry` is created as a standalone GameObject in `Start()`; `CardInventory.AddCard()` relies on `SpellEffectRegistry.Instance` being set before any card is picked.
-- Between rounds, `PlayerDeathHandler.ResetForRound()` must be called on dead players before repositioning — it re-enables the GameObject, colliders, rigidbody, and input.
-- `EnvironmentHazard` damage fields are private `[SerializeField]`; for instant-kill triggers, use `InstantKillTrigger` (defined in `BoxArenaBuilder.cs`) instead.
+Builds the entire 2-player match scene at runtime — no scene hierarchy setup needed.
 
-### TestArenaBuilder
-Movement-test scene only — no match logic:
-- `SetupPlayerSpawningWithSpawns()` adds `PlayerInputManager` and stores spawn points.
-- `OnPlayerJoined(PlayerInput)` is called by `PlayerInputManager` via **SendMessages** (no C# event subscription needed). Handles position, color, `PlayerIdentity`, and camera registration inline.
+**Arena geometry** is created in `BuildBoxArena()`:
+- Floor (`Ground` layer), left/right walls (`Wall` layer, zero friction), ceiling
+- Four **kill zone** trigger strips outside the arena (`killZonePadding`, default 6 units). Anything entering a kill zone: players take 9999 damage (instant kill), projectiles are destroyed
+
+**Player spawning** uses `PlayerInput.Instantiate(prefab, playerIndex, controlScheme, -1, Keyboard.current)`:
+- P1: scheme `"KeyboardWASD"` — WASD move, Space jump, F shoot, LShift dash
+- P2: scheme `"KeyboardArrows"` — Arrow keys move, RShift jump, Enter shoot, LShift dash
+- Gamepad: left stick move, South jump, East shoot, South dash
+
+**Round loop**: `StartRound()` → subscribes `HealthSystem.OnDeath` → `OnPlayerDied()` → `EndRoundAfterDelay()` → `EndRound()` → `AutoPickCardThenNextRound(loserIndex)` coroutine → `StartRound()`.
+
+**Key rules:**
+- `PlayerDeathHandler.ResetForRound()` must be called on dead players before repositioning each round
+- `SpellEffectRegistry` is created as a standalone GameObject in `Start()` before any card is added
+- `InstantKillTrigger` (inner class) handles both player kills and projectile destruction in `OnTriggerEnter2D`
+
+---
+
+## Projectile System
+
+Projectiles are configured by `CombatData` at spawn time, with **prefab-level SerializeField overrides** on `Projectile.cs`:
+
+| SerializeField | Default | Effect |
+|----------------|---------|--------|
+| `lifetimeMultiplier` | `5` | Multiplies CombatData lifetime |
+| `bulletGravity` | `0.15` | Rigidbody gravity scale — slow arc |
+| `bulletBounces` | `3` | Bounce count before destroying |
+
+Spawn position is computed using `col.bounds` (world-space AABB — correct when player is flipped) projected onto the aim direction, plus `projectileRadius + 0.1f` clearance. `CanHitOwner = true` by default — friendly fire and self-damage are enabled.
+
+Bounce normals use `Physics2D.Distance` for accurate reflection off floors, walls, and ceilings.
