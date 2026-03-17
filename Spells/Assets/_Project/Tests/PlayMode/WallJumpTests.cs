@@ -46,7 +46,7 @@ public class WallJumpTests
         yield return new WaitForSeconds(0.5f);
 
         // Should be wall sliding — record speed
-        bool wasSliding = player.stateMachine.CurrentState is WallSlideState;
+        bool wasSliding = player.stateMachine.CurrentState is WallSlidingState;
         float wallSlideSpeed = Mathf.Abs(player.rb.linearVelocity.y);
 
         // Now release and free fall — move away from wall but DON'T push toward ground
@@ -81,7 +81,7 @@ public class WallJumpTests
         yield return new WaitForSeconds(0.3f);
 
         // Should be wall sliding on left wall
-        if (player.stateMachine.CurrentState is WallSlideState)
+        if (player.stateMachine.CurrentState is WallSlidingState)
         {
             float preJumpX = player.rb.linearVelocity.x;
 
@@ -98,7 +98,7 @@ public class WallJumpTests
         }
         else
         {
-            Debug.LogWarning($"Expected WallSlideState, got {player.stateMachine.GetStateName()}");
+            Debug.LogWarning($"Expected WallSlidingState, got {player.stateMachine.GetStateName()}");
         }
     }
 
@@ -112,7 +112,7 @@ public class WallJumpTests
 
         yield return new WaitForSeconds(0.3f);
 
-        if (!(player.stateMachine.CurrentState is WallSlideState))
+        if (!(player.stateMachine.CurrentState is WallSlidingState))
         {
             Assert.Inconclusive("Could not enter wall slide on first wall");
             yield break;
@@ -136,7 +136,7 @@ public class WallJumpTests
             yield return new WaitForFixedUpdate();
             elapsed += Time.fixedDeltaTime;
 
-            if (player.stateMachine.CurrentState is WallSlideState && elapsed > 0.2f)
+            if (player.stateMachine.CurrentState is WallSlidingState && elapsed > 0.2f)
             {
                 grabbedSecondWall = true;
                 break;

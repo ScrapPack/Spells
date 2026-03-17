@@ -11,7 +11,7 @@ public class PlayerStateMachine : MonoBehaviour
     // Pre-allocated states
     public GroundedState GroundedState { get; private set; }
     public AirborneState AirborneState { get; private set; }
-    public WallSlideState WallSlideState { get; private set; }
+    public WallSlidingState WallSlideState { get; private set; }
     public HitstunState HitstunState { get; private set; }
     public SurfaceTraversalState SurfaceTraversalState { get; private set; }
 
@@ -37,7 +37,7 @@ public class PlayerStateMachine : MonoBehaviour
     {
         GroundedState = new GroundedState();
         AirborneState = new AirborneState();
-        WallSlideState = new WallSlideState();
+        WallSlideState = new WallSlidingState();
         HitstunState = new HitstunState();
         SurfaceTraversalState = new SurfaceTraversalState();
     }

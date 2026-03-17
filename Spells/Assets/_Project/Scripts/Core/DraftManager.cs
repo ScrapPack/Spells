@@ -197,6 +197,14 @@ public class DraftManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Set the card database at runtime (called by BoxArenaBuilder before Start()).
+    /// </summary>
+    public void SetCardDatabase(PowerCardData[] cards)
+    {
+        allCards = cards;
+    }
+
+    /// <summary>
     /// Get a player's current level.
     /// </summary>
     public int GetPlayerLevel(int playerID)

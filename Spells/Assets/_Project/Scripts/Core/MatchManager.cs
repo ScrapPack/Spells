@@ -283,6 +283,23 @@ public class MatchManager : MonoBehaviour
     }
 
     // =========================================================
+    // Runtime Wiring (for builder scripts — sets private refs before Start())
+    // =========================================================
+
+    /// <summary>
+    /// Set core manager references at runtime (called by BoxArenaBuilder before Start()).
+    /// </summary>
+    public void SetReferences(RoundManager rm, DraftManager dm, PlayerSpawnManager sm, MultiTargetCamera cam,
+                              int wins = 0)
+    {
+        roundManager = rm;
+        draftManager = dm;
+        spawnManager = sm;
+        multiCamera = cam;
+        if (wins > 0) winsToWinMatch = wins;
+    }
+
+    // =========================================================
     // Queries
     // =========================================================
 
