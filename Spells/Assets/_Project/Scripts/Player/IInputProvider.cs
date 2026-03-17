@@ -8,6 +8,11 @@ public interface IInputProvider
     bool CrouchHeld { get; }
     void ConsumeJump();
 
+    // Dash input
+    bool DashPressed { get; }
+    bool DashHeld { get; }
+    void ConsumeDash();
+
     // Combat inputs
     bool ShootPressed { get; }
     bool ShootHeld { get; }

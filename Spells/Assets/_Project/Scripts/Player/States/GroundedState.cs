@@ -16,6 +16,10 @@ public class GroundedState : IPlayerState
         ctx.CoyoteTimer = 0f;
         waveLandGraceTimer = WAVE_LAND_GRACE;
 
+        // Refill dash charges and wall stamina on landing
+        ctx.DashesRemaining = ctx.Controller.Data.maxAirDashes;
+        ctx.WallStamina = ctx.Controller.Data.wallStaminaMax;
+
         // Pick the best pre-landing velocity — compare HORIZONTAL speed only.
         // The old code compared .magnitude which picked whichever had more
         // total velocity (including vertical). This caused fast-fall vertical
@@ -73,7 +77,15 @@ public class GroundedState : IPlayerState
             ctx.Controller.EndSlide();
         }
 
-        // Jump — wave-jump preserves slide momentum, normal jump doesn't
+        // Dash (Celeste)
+        if (ctx.Input.DashPressed && ctx.DashesRemaining > 0)
+        {
+            ctx.ChangeState(ctx.DashState);
+            return;
+        }
+
+        // Jump — wave-jump preserves slide momentum, normal jump doesn't.
+        // Corner correction nudges the player past tight ceiling corners.
         if (ctx.Input.JumpPressed)
         {
             ctx.Input.ConsumeJump();
@@ -87,6 +99,7 @@ public class GroundedState : IPlayerState
                 ctx.Controller.EndSlide();
             }
             ctx.Controller.ApplyJumpForce();
+            ctx.Controller.TryCornerCorrect(ctx.Controller.Data.cornerCorrectDistance);
             ctx.ChangeState(ctx.AirborneState);
             return;
         }

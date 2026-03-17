@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "PlayerInputActions",
     "maps": [
         {
@@ -36,7 +37,7 @@
                     "name": "Parry",
                     "type": "Button",
                     "id": "c1d2e3f4-4444-5555-6666-ddddeeeeffff",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -49,6 +50,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "Dash",
+                    "type": "Button",
+                    "id": "76277ad9-69d2-4ee7-8871-b9a04cfb3924",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -61,8 +71,7 @@
                     "groups": "",
                     "action": "Move",
                     "isComposite": true,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "up",
@@ -73,8 +82,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "down",
@@ -85,8 +93,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "left",
@@ -97,8 +104,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "right",
@@ -109,8 +115,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "",
@@ -121,8 +126,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Jump",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "Arrows",
@@ -133,8 +137,7 @@
                     "groups": "",
                     "action": "Move",
                     "isComposite": true,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "up",
@@ -145,8 +148,7 @@
                     "groups": "KeyboardArrows",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "down",
@@ -157,8 +159,7 @@
                     "groups": "KeyboardArrows",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "left",
@@ -169,8 +170,7 @@
                     "groups": "KeyboardArrows",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "right",
@@ -181,8 +181,7 @@
                     "groups": "KeyboardArrows",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": true,
-                    "modifiers": ""
+                    "isPartOfComposite": true
                 },
                 {
                     "name": "",
@@ -193,8 +192,7 @@
                     "groups": "KeyboardArrows",
                     "action": "Jump",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -205,8 +203,7 @@
                     "groups": "Gamepad",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -217,8 +214,7 @@
                     "groups": "Gamepad",
                     "action": "Move",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -229,8 +225,7 @@
                     "groups": "Gamepad",
                     "action": "Jump",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -241,8 +236,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Shoot",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -253,8 +247,7 @@
                     "groups": "KeyboardArrows",
                     "action": "Shoot",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -265,8 +258,7 @@
                     "groups": "Gamepad",
                     "action": "Shoot",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -277,8 +269,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Parry",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -289,8 +280,7 @@
                     "groups": "KeyboardArrows",
                     "action": "Parry",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -301,8 +291,7 @@
                     "groups": "Gamepad",
                     "action": "Parry",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -313,8 +302,7 @@
                     "groups": "KeyboardWASD",
                     "action": "Aim",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
                 },
                 {
                     "name": "",
@@ -325,8 +313,29 @@
                     "groups": "Gamepad",
                     "action": "Aim",
                     "isComposite": false,
-                    "isPartOfComposite": false,
-                    "modifiers": ""
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f0a694ef-32b5-4fd0-abbf-aedbcd7a9d51",
+                    "path": "<Gamepad>/buttonSouth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Gamepad",
+                    "action": "Dash",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "61afe0ad-edc3-449f-947a-6243ebe1a2ea",
+                    "path": "<Keyboard>/leftShift",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";KeyboardWASD;KeyboardArrows",
+                    "action": "Dash",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         }

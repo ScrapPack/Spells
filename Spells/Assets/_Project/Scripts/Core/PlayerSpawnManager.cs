@@ -23,8 +23,20 @@ public class PlayerSpawnManager : MonoBehaviour
     [Tooltip("Default class data assigned to joining players (temporary — replaced by character select)")]
     [SerializeField] private ClassData defaultClassData;
 
+    [Header("Auto Start")]
+    [Tooltip("Call MatchManager.StartMatch() automatically when this many players have joined. 0 = disabled.")]
+    [SerializeField] private int autoStartMatchAtPlayerCount = 0;
+
     private int playerCount = 0;
     private bool isInitialized = false;
+
+    // =========================================================
+    // Runtime Wiring (called by builder scripts before Start())
+    // =========================================================
+
+    public void SetMatchManager(MatchManager mm) => matchManager = mm;
+    public void SetDefaultClass(ClassData data) => defaultClassData = data;
+    public void SetAutoStartCount(int count) => autoStartMatchAtPlayerCount = count;
 
     /// <summary>
     /// Call this from TestArenaBuilder to wire up references at runtime.
@@ -131,6 +143,10 @@ public class PlayerSpawnManager : MonoBehaviour
         }
 
         Debug.Log($"Player {index + 1} joined as {(defaultClassData != null ? defaultClassData.className : "unknown")} (Device: {playerInput.currentControlScheme})");
+
+        // Auto-start match once enough players have joined
+        if (autoStartMatchAtPlayerCount > 0 && playerCount >= autoStartMatchAtPlayerCount && matchManager != null)
+            matchManager.StartMatch();
     }
 
     private void OnPlayerLeft(PlayerInput playerInput)

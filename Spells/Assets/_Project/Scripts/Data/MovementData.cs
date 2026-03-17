@@ -10,6 +10,8 @@ public class MovementData : ScriptableObject
     [Range(5f, 300f)] public float acceleration = 100f;
     [Tooltip("Ground deceleration in units/sec². Slightly slower than accel gives a micro-slide feel.")]
     [Range(5f, 300f)] public float deceleration = 80f;
+    [Tooltip("Acceleration applied when pushing in the opposite direction of current velocity (higher = snappier turn)")]
+    [Range(50f, 600f)] public float turnAroundAcceleration = 250f;
 
     [Header("Dash Burst")]
     [Tooltip("Instant speed multiplier when starting from standstill or reversing direction")]
@@ -18,6 +20,16 @@ public class MovementData : ScriptableObject
     [Range(1f, 30f)] public float dashDecayRate = 10f;
     [Tooltip("Minimum speed (as fraction of moveSpeed) to be considered 'still' for dash trigger")]
     [Range(0f, 0.3f)] public float dashStillThreshold = 0.15f;
+
+    [Header("Dash (Celeste)")]
+    [Tooltip("Speed of the dash in units/second")]
+    [Range(10f, 50f)] public float dashSpeed = 22f;
+    [Tooltip("Duration of the dash movement in seconds")]
+    [Range(0.05f, 0.4f)] public float dashDuration = 0.15f;
+    [Tooltip("Number of air dashes available (refills on ground contact)")]
+    [Range(0, 3)] public int maxAirDashes = 1;
+    [Tooltip("Duration of the freeze-frame pause at dash start in seconds")]
+    [Range(0f, 0.1f)] public float dashFreezeFrameDuration = 0.03f;
 
     [Header("Air Movement")]
     [Tooltip("Air acceleration — slower than ground for committed jumps (Celeste uses 0.65x ground)")]
@@ -37,12 +49,24 @@ public class MovementData : ScriptableObject
     [Range(0, 3)] public int maxAirJumps = 0;
 
     [Header("Wall")]
-    public Vector2 wallJumpForce = new Vector2(12f, 16f);
-    [Range(1f, 10f)] public float wallSlideSpeedMin = 3f;
-    [Range(5f, 25f)] public float wallSlideSpeedMax = 15f;
+    public Vector2 wallJumpForce = new Vector2(9f, 18f);
+    [Range(0f, 10f)] public float wallSlideSpeedMin = 0.5f;
+    [Range(1f, 25f)] public float wallSlideSpeedMax = 6f;
     [Tooltip("Seconds to accelerate from min to max wall slide speed")]
-    [Range(0.1f, 5f)] public float wallSlideAccelTime = 1.2f;
+    [Range(0.1f, 5f)] public float wallSlideAccelTime = 2.0f;
     [Range(0f, 0.5f)] public float wallJumpLockoutTime = 0.15f;
+
+    [Header("Wall Climb (Celeste)")]
+    [Tooltip("Total wall stamina (1 = can slide indefinitely at min speed)")]
+    [Range(0.2f, 3f)] public float wallStaminaMax = 1.1f;
+    [Tooltip("Stamina drained per second while wall sliding")]
+    [Range(0.1f, 2f)] public float wallStaminaDrainRate = 0.8f;
+    [Tooltip("Upward speed when actively climbing the wall (uses 2x stamina drain)")]
+    [Range(1f, 8f)] public float wallClimbSpeed = 3.5f;
+
+    [Header("Corner Correction")]
+    [Tooltip("Max horizontal nudge distance to slide past a ceiling corner during a jump")]
+    [Range(0f, 1f)] public float cornerCorrectDistance = 0.4f;
 
     [Header("Fast Fall")]
     [Tooltip("Gravity multiplier when holding down while airborne and falling")]

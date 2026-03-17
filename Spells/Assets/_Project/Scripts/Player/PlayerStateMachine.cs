@@ -11,19 +11,27 @@ public class PlayerStateMachine : MonoBehaviour
     // Pre-allocated states
     public GroundedState GroundedState { get; private set; }
     public AirborneState AirborneState { get; private set; }
-    public WallSlideState WallSlideState { get; private set; }
+    public WallSlidingState WallSlideState { get; private set; }
     public HitstunState HitstunState { get; private set; }
     public SurfaceTraversalState SurfaceTraversalState { get; private set; }
+    public DashState DashState { get; private set; }
 
     /// <summary>
     /// Set by SpiderShoesItem. When true, wall/ceiling contact can trigger SurfaceTraversalState.
     /// </summary>
     public bool HasSpiderShoes { get; set; }
 
+    // Celeste dash / wall stamina
+    public int DashesRemaining { get; set; }
+    public float WallStamina { get; set; }
+
     // Shared timers accessible by states
     public float JumpBufferTimer { get; set; }
     public float CoyoteTimer { get; set; }
     public float WallJumpLockoutTimer { get; set; }
+
+    // Freeze frame: pauses state execution for a short duration (e.g. at dash start)
+    private float freezeFrameTimer;
 
     /// <summary>
     /// Velocity captured each FixedUpdate while airborne, BEFORE collision resolution.
@@ -37,9 +45,10 @@ public class PlayerStateMachine : MonoBehaviour
     {
         GroundedState = new GroundedState();
         AirborneState = new AirborneState();
-        WallSlideState = new WallSlideState();
+        WallSlideState = new WallSlidingState();
         HitstunState = new HitstunState();
         SurfaceTraversalState = new SurfaceTraversalState();
+        DashState = new DashState();
     }
 
     private void Start()
@@ -58,6 +67,8 @@ public class PlayerStateMachine : MonoBehaviour
 
         if (Input != null && Controller != null && Controller.Data != null && Physics != null)
         {
+            DashesRemaining = Controller.Data.maxAirDashes;
+            WallStamina = Controller.Data.wallStaminaMax;
             ChangeState(AirborneState);
             initialized = true;
         }
@@ -78,6 +89,13 @@ public class PlayerStateMachine : MonoBehaviour
     {
         if (!initialized || Input == null) return;
 
+        // Freeze frame: pause all state execution for a short duration (hitstop at dash start)
+        if (freezeFrameTimer > 0f)
+        {
+            freezeFrameTimer -= Time.unscaledDeltaTime;
+            return;
+        }
+
         // Tick shared timers
         if (JumpBufferTimer > 0f) JumpBufferTimer -= Time.deltaTime;
         if (CoyoteTimer > 0f) CoyoteTimer -= Time.deltaTime;
@@ -95,8 +113,18 @@ public class PlayerStateMachine : MonoBehaviour
     private void FixedUpdate()
     {
         if (!initialized || Input == null) return;
+        if (freezeFrameTimer > 0f) return; // Paused during freeze frame
 
         CurrentState?.FixedExecute();
+    }
+
+    /// <summary>
+    /// Pause state execution for <paramref name="duration"/> seconds (unscaled).
+    /// Used for the 2-frame hitstop at dash start.
+    /// </summary>
+    public void StartFreezeFrame(float duration)
+    {
+        freezeFrameTimer = duration;
     }
 
     /// <summary>
