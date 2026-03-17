@@ -15,16 +15,31 @@ public class SetupPlayerPrefab : Editor
     [MenuItem("Spells/Setup Player Prefab", false, 101)]
     public static void Setup()
     {
-        // Find the player prefab
+        if (!DoSetup())
+        {
+            EditorUtility.DisplayDialog("Error",
+                "Player prefab not found at:\nAssets/_Project/Prefabs/Player/PlayerCharacter.prefab\n\nCreate it first or update the path.",
+                "OK");
+            return;
+        }
+
+        EditorUtility.DisplayDialog("Player Prefab Setup",
+            "Player prefab setup complete. Check console for details.", "OK");
+    }
+
+    /// <summary>
+    /// Adds all combat/game components to the player prefab. No UI dialogs.
+    /// Returns false if the prefab is missing.
+    /// </summary>
+    public static bool DoSetup()
+    {
         string prefabPath = "Assets/_Project/Prefabs/Player/PlayerCharacter.prefab";
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
 
         if (prefab == null)
         {
-            EditorUtility.DisplayDialog("Error",
-                $"Player prefab not found at:\n{prefabPath}\n\nCreate it first or update the path.",
-                "OK");
-            return;
+            Debug.LogError($"[Spells] Player prefab not found at: {prefabPath}");
+            return false;
         }
 
         // Open prefab for editing
@@ -62,7 +77,7 @@ public class SetupPlayerPrefab : Editor
             : "All components already present. No changes needed.";
 
         Debug.Log($"[Spells] ✓ Player prefab setup: {message}");
-        EditorUtility.DisplayDialog("Player Prefab Setup", message, "OK");
+        return true;
     }
 
     /// <summary>

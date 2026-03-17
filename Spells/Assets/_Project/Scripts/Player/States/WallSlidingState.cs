@@ -5,11 +5,17 @@ public class WallSlideState : IPlayerState
     private PlayerStateMachine ctx;
     private float slideTimer;
 
+    // Grace period: allow player to release toward-wall briefly without detaching,
+    // giving time to change direction and press jump for a wall jump.
+    private float wallStickTimer;
+    private const float WALL_STICK_DURATION = 0.05f; // ~3 frames at 60fps
+
     public void Enter(PlayerStateMachine ctx)
     {
         this.ctx = ctx;
         ctx.CoyoteTimer = 0f;
         slideTimer = 0f;
+        wallStickTimer = 0f;
 
         // Spider shoes: immediately enter surface traversal instead of sliding
         if (ctx.HasSpiderShoes)
@@ -21,7 +27,7 @@ public class WallSlideState : IPlayerState
 
     public void Execute()
     {
-        // Wall jump
+        // Wall jump — always check first, even during wall-stick grace period
         if (ctx.Input.JumpPressed)
         {
             ctx.Input.ConsumeJump();
@@ -31,15 +37,24 @@ public class WallSlideState : IPlayerState
             return;
         }
 
-        // Released wall (stopped holding toward it)
+        // Released wall (stopped holding toward it) — use grace timer
         float inputX = ctx.Input.MoveInput.x;
         bool holdingTowardWall = (ctx.Physics.WallDirection == 1 && inputX > 0.1f)
                               || (ctx.Physics.WallDirection == -1 && inputX < -0.1f);
 
         if (!holdingTowardWall || !ctx.Physics.IsTouchingWall)
         {
-            ctx.ChangeState(ctx.AirborneState);
-            return;
+            wallStickTimer += Time.deltaTime;
+            if (wallStickTimer >= WALL_STICK_DURATION)
+            {
+                ctx.ChangeState(ctx.AirborneState);
+                return;
+            }
+        }
+        else
+        {
+            // Reset grace timer while still holding toward wall
+            wallStickTimer = 0f;
         }
 
         // Landed while wall sliding

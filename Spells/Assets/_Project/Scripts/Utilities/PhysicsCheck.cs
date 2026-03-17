@@ -4,7 +4,7 @@ public class PhysicsCheck : MonoBehaviour
 {
     [Header("Ground Check")]
     [SerializeField] private Vector2 groundCheckOffset = new Vector2(0f, -0.5f);
-    [SerializeField] private Vector2 groundCheckSize = new Vector2(0.4f, 0.04f);
+    [SerializeField] private Vector2 groundCheckSize = new Vector2(0.5f, 0.25f);
     [SerializeField] private LayerMask groundLayer;
 
     [Header("Wall Check")]
@@ -16,7 +16,7 @@ public class PhysicsCheck : MonoBehaviour
     [SerializeField] private Vector2 ceilingCheckSize = new Vector2(0.4f, 0.04f);
 
     [Header("Slope Detection")]
-    [SerializeField] private float groundRayDistance = 0.7f;
+    [SerializeField] private float groundRayDistance = 0.9f;
 
     public bool IsGrounded { get; private set; }
     public bool IsTouchingWall { get; private set; }
@@ -38,6 +38,11 @@ public class PhysicsCheck : MonoBehaviour
     /// True if the player is standing on a slope (angle > 1 degree).
     /// </summary>
     public bool IsOnSlope { get; private set; }
+
+    // Grounded frame buffer: prevents flickering on slopes and uneven surfaces.
+    // Stays grounded for a few physics frames after losing contact.
+    private int groundedFrameBuffer;
+    private const int GROUND_BUFFER_FRAMES = 3; // ~0.06s at 50Hz physics
 
     private void Awake()
     {
@@ -82,27 +87,63 @@ public class PhysicsCheck : MonoBehaviour
     private void CheckGround()
     {
         Vector2 origin = (Vector2)transform.position + groundCheckOffset;
-        IsGrounded = Physics2D.OverlapBox(origin, groundCheckSize, 0f, groundLayer) != null;
+        bool boxHit = Physics2D.OverlapBox(origin, groundCheckSize, 0f, groundLayer) != null;
 
-        // Raycast downward to get the ground surface normal for slope detection
-        if (IsGrounded)
+        // Primary raycast straight down
+        Vector2 rayOrigin = (Vector2)transform.position;
+        float rayGroundThreshold = Mathf.Abs(groundCheckOffset.y) + groundCheckSize.y * 0.5f + 0.20f;
+        RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, groundRayDistance, groundLayer);
+        bool rayHit = hit.collider != null && hit.distance <= rayGroundThreshold;
+
+        // Angled raycasts to catch slopes the vertical ray misses.
+        // On a steep slope, the surface angles away from the vertical ray —
+        // fanning out at +/-20° catches it reliably.
+        if (!rayHit)
         {
-            Vector2 rayOrigin = (Vector2)transform.position;
-            RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, groundRayDistance, groundLayer);
+            Vector2 leftAngle = new Vector2(-0.36f, -1f).normalized;   // ~20° left
+            Vector2 rightAngle = new Vector2(0.36f, -1f).normalized;   // ~20° right
+            var leftRay = Physics2D.Raycast(rayOrigin, leftAngle, groundRayDistance, groundLayer);
+            var rightRay = Physics2D.Raycast(rayOrigin, rightAngle, groundRayDistance, groundLayer);
 
-            if (hit.collider != null)
+            if (leftRay.collider != null && leftRay.distance <= rayGroundThreshold)
             {
-                GroundNormal = hit.normal;
-                GroundAngle = Vector2.Angle(Vector2.up, GroundNormal);
-                IsOnSlope = GroundAngle > 1f;
+                rayHit = true;
+                hit = leftRay;
             }
-            else
+            else if (rightRay.collider != null && rightRay.distance <= rayGroundThreshold)
             {
-                // Fallback: grounded but ray missed (edge case), assume flat
-                GroundNormal = Vector2.up;
-                GroundAngle = 0f;
-                IsOnSlope = false;
+                rayHit = true;
+                hit = rightRay;
             }
+        }
+
+        bool directContact = boxHit || rayHit;
+
+        // Grounded frame buffer: stay grounded for a few frames after losing contact.
+        // Prevents flickering on slopes and uneven terrain that causes jump to fail.
+        if (directContact)
+        {
+            groundedFrameBuffer = GROUND_BUFFER_FRAMES;
+        }
+        else if (groundedFrameBuffer > 0)
+        {
+            groundedFrameBuffer--;
+        }
+
+        IsGrounded = groundedFrameBuffer > 0;
+
+        // Get ground normal for slope detection
+        if (IsGrounded && hit.collider != null)
+        {
+            GroundNormal = hit.normal;
+            GroundAngle = Vector2.Angle(Vector2.up, GroundNormal);
+            IsOnSlope = GroundAngle > 1f;
+        }
+        else if (IsGrounded)
+        {
+            GroundNormal = Vector2.up;
+            GroundAngle = 0f;
+            IsOnSlope = false;
         }
         else
         {
@@ -149,10 +190,15 @@ public class PhysicsCheck : MonoBehaviour
         Vector2 groundOrigin = (Vector2)transform.position + groundCheckOffset;
         Gizmos.DrawWireCube(groundOrigin, groundCheckSize);
 
-        // Ground normal ray
+        // Ground normal rays (center + angled for slope detection)
         Gizmos.color = Color.cyan;
         Vector2 rayOrigin = (Vector2)transform.position;
         Gizmos.DrawLine(rayOrigin, rayOrigin + Vector2.down * groundRayDistance);
+        Vector2 leftAngle = new Vector2(-0.36f, -1f).normalized;
+        Vector2 rightAngle = new Vector2(0.36f, -1f).normalized;
+        Gizmos.color = new Color(0f, 0.8f, 0.8f, 0.5f);
+        Gizmos.DrawLine(rayOrigin, rayOrigin + leftAngle * groundRayDistance);
+        Gizmos.DrawLine(rayOrigin, rayOrigin + rightAngle * groundRayDistance);
         if (IsGrounded && GroundNormal != Vector2.zero)
         {
             Gizmos.color = Color.yellow;

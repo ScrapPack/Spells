@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a87635787b2b6a4e8bf2a0dab3aa34e, type: 3}
+  m_Name: SharedMovement
+  m_EditorClassIdentifier: Spells::MovementData
+  moveSpeed: 10
+  acceleration: 100
+  deceleration: 80
+  dashBurstMultiplier: 1.5
+  dashDecayRate: 10
+  dashStillThreshold: 0.15
+  airAcceleration: 65
+  airDeceleration: 50
+  jumpForce: 14
+  jumpCutMultiplier: 0.4
+  coyoteTimeDuration: 0.12
+  jumpBufferDuration: 0.12
+  maxAirJumps: 0
+  wallJumpForce: {x: 12, y: 16}
+  wallSlideSpeedMin: 3
+  wallSlideSpeedMax: 15
+  wallSlideAccelTime: 1.2
+  wallJumpLockoutTime: 0.15
+  fastFallGravityMultiplier: 4
+  fastFallMaxSpeed: 30
+  slideMinSpeed: 3
+  slideFriction: 25
+  slideBoostMultiplier: 1.15
+  waveLandSpeedBoost: 1.3
+  waveLandFriction: 30
+  waveLandMinSpeed: 2
+  gravityScale: 3
+  fallGravityMultiplier: 2.5
+  peakGravityMultiplier: 0.4
+  peakVelocityThreshold: 2
+  maxFallSpeed: 20

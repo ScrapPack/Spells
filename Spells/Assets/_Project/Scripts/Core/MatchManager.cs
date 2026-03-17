@@ -27,6 +27,7 @@ public class MatchManager : MonoBehaviour
     [SerializeField] private MonsterSpawnManager monsterSpawnManager;
     [SerializeField] private ChestSpawnManager chestSpawnManager;
     [SerializeField] private ModularArenaBuilder arenaBuilder;
+    [SerializeField] private ProceduralLevelGenerator levelGenerator;
 
     [Header("Events")]
     public UnityEvent<MatchState> OnStateChanged;
@@ -153,6 +154,24 @@ public class MatchManager : MonoBehaviour
     {
         CurrentRound++;
         ChangeState(MatchState.RoundStart);
+
+        // Generate new arena for this round (if procedural generator is assigned)
+        if (levelGenerator != null && arenaBuilder != null)
+        {
+            var layout = levelGenerator.GenerateForRound(CurrentRound);
+            if (layout != null)
+            {
+                arenaBuilder.Build(layout);
+
+                // Set camera background to match biome
+                if (levelGenerator.LastUsedBiome != null && Camera.main != null)
+                    Camera.main.backgroundColor = levelGenerator.LastUsedBiome.backgroundColor;
+
+                // Update spawn points for players
+                if (spawnManager != null && arenaBuilder.PlayerSpawnPoints != null)
+                    spawnManager.SetSpawnPoints(arenaBuilder.PlayerSpawnPoints);
+            }
+        }
 
         // Announce round number
         if (announcer != null)

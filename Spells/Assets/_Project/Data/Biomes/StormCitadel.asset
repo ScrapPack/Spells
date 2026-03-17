@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85f86d87350454b05994a79678f16485, type: 3}
+  m_Name: StormCitadel
+  m_EditorClassIdentifier: Spells::BiomeData
+  biomeName: Storm Citadel
+  description: A towering fortress of narrow ledges and vertical challenges. Climb
+    or be pushed into the storm below.
+  structureType: 3
+  arenaBounds: {x: 30, y: 32}
+  groundCoverage: 0.4
+  groundGapCount: 1
+  gapWidthRange: {x: 3, y: 5}
+  groundThickness: 1
+  platformCount: 14
+  platformWidthRange: {x: 2.5, y: 5}
+  platformThicknessRange: {x: 0.4, y: 0.7}
+  platformLevels: 5
+  maxPlatformHeight: 20
+  wallCount: 6
+  wallHeightRange: {x: 3, y: 7}
+  wallThickness: 0.8
+  rampCount: 0
+  rampAngleRange: {x: 25, y: 40}
+  rampLengthRange: {x: 2, y: 4}
+  hasBottomKillZone: 1
+  killZoneCount: 0
+  killZoneSizeRange: {x: 3, y: 6}
+  movingPlatformCount: 2
+  moveAmplitudeRange: {x: 2, y: 4}
+  moveSpeedRange: {x: 0.3, y: 0.6}
+  movePlatformAxis: 1
+  monsterCount: 0
+  chestCount: 2
+  groundColor: {r: 0.3, g: 0.3, b: 0.35, a: 1}
+  platformColor: {r: 0.35, g: 0.33, b: 0.38, a: 1}
+  wallColor: {r: 0.28, g: 0.28, b: 0.33, a: 1}
+  hazardColor: {r: 0.3, g: 0.5, b: 0.9, a: 0.4}
+  backgroundColor: {r: 0.06, g: 0.06, b: 0.1, a: 1}
+  hasBoundaryWalls: 1
+  hasCeiling: 0

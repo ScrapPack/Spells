@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b1359d0c34b64aaf88be3893ff89dba, type: 3}
+  m_Name: Warrior
+  m_EditorClassIdentifier: Spells::ClassData
+  className: Warrior
+  description: Tanky axe-thrower with resource management. 4 HP, arcing retrievable
+    axes, high knockback, smallest card pool.
+  combatData: {fileID: 11400000, guid: 2217f4b3e4ad84a89abe60c28e14e048, type: 2}
+  projectilePrefab: {fileID: 8107133549991458955, guid: 992f3be29bea549ef8765f63835eebc8, type: 3}
+  cardPoolTags:
+  - General
+  - Warrior
+  classColor: {r: 0.9, g: 0.4, b: 0.1, a: 1}
+  classIcon: {fileID: 0}

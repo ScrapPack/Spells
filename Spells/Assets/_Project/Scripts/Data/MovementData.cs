@@ -44,6 +44,20 @@ public class MovementData : ScriptableObject
     [Range(0.1f, 5f)] public float wallSlideAccelTime = 1.2f;
     [Range(0f, 0.5f)] public float wallJumpLockoutTime = 0.15f;
 
+    [Header("Fast Fall")]
+    [Tooltip("Gravity multiplier when holding down while airborne and falling")]
+    [Range(1f, 8f)] public float fastFallGravityMultiplier = 4f;
+    [Tooltip("Terminal velocity during fast fall")]
+    [Range(1f, 60f)] public float fastFallMaxSpeed = 30f;
+
+    [Header("Ground Slide")]
+    [Tooltip("Minimum horizontal speed to trigger a ground slide")]
+    [Range(1f, 8f)] public float slideMinSpeed = 3f;
+    [Tooltip("Friction applied during ground slide (higher = shorter slide)")]
+    [Range(5f, 60f)] public float slideFriction = 25f;
+    [Tooltip("Speed boost multiplier applied at start of ground slide")]
+    [Range(1f, 2f)] public float slideBoostMultiplier = 1.15f;
+
     [Header("Wave-Land")]
     [Tooltip("Speed multiplier applied to horizontal velocity on wave-land")]
     [Range(1f, 2f)] public float waveLandSpeedBoost = 1.3f;

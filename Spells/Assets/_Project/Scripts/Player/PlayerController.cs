@@ -12,13 +12,18 @@ public class PlayerController : MonoBehaviour
     private float currentMaxSpeed;
     private float lastInputDirection;
 
-    // Wave-land state
+    // Wave-land / ground-slide shared state
     public bool IsWaveLanding { get; private set; }
-    private float waveLandDirection;
+    public bool IsSliding { get; private set; }
+    private float slideDirection;
+
+    // Cached component reference for slope detection
+    private PhysicsCheck physics;
 
     private void Awake()
     {
         Rb = GetComponent<Rigidbody2D>();
+        physics = GetComponent<PhysicsCheck>();
 
         if (baseMovementData != null)
             Data = baseMovementData.Clone();
@@ -111,29 +116,27 @@ public class PlayerController : MonoBehaviour
     // =========================================================
 
     /// <summary>
-    /// Start a wave-land: convert pre-landing momentum into a horizontal slide.
-    /// Uses velocity captured before collision resolution ate the speed.
-    /// Simplified from the old version — removed slope direction detection
-    /// that was causing confusion and edge cases.
+    /// Start a wave-land: convert pre-landing HORIZONTAL momentum into a slide.
+    /// Only horizontal velocity matters — vertical fast-fall speed must NOT
+    /// convert to horizontal momentum. In Celeste and Rivals of Aether,
+    /// fast fall is purely vertical and never feeds into horizontal movement.
     /// </summary>
     public void StartWaveLand(Vector2 preLandingVelocity)
     {
         float absHorizontal = Mathf.Abs(preLandingVelocity.x);
-        float totalSpeed = preLandingVelocity.magnitude;
 
-        // Need some momentum to trigger
-        if (absHorizontal < Data.waveLandMinSpeed && totalSpeed < Data.waveLandMinSpeed)
-            return;
-
-        // Need a horizontal direction to slide in
-        if (absHorizontal < 0.5f)
+        // Need meaningful horizontal momentum to trigger.
+        // The old code checked magnitude (including vertical) which meant
+        // fast-falling at (1.5, -30) had magnitude 30 and triggered a massive slide.
+        if (absHorizontal < Data.waveLandMinSpeed)
             return;
 
         IsWaveLanding = true;
-        waveLandDirection = Mathf.Sign(preLandingVelocity.x);
+        IsSliding = true;
+        slideDirection = Mathf.Sign(preLandingVelocity.x);
 
-        // Convert total pre-landing momentum into horizontal slide speed
-        float boostedSpeed = totalSpeed * Data.waveLandSpeedBoost * waveLandDirection;
+        // Use ONLY horizontal velocity for the slide speed.
+        float boostedSpeed = absHorizontal * Data.waveLandSpeedBoost * slideDirection;
         Rb.linearVelocity = new Vector2(boostedSpeed, 0f);
 
         // Let the slide exceed normal max speed
@@ -141,39 +144,103 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Apply wave-land friction. Call every FixedUpdate during a wave-land.
+    /// Start a ground slide: crouch while running on the ground.
+    /// Uses current horizontal velocity as the slide base.
+    /// </summary>
+    public void StartGroundSlide()
+    {
+        float absVelX = Mathf.Abs(Rb.linearVelocity.x);
+        if (absVelX < Data.slideMinSpeed) return;
+
+        IsSliding = true;
+        slideDirection = Mathf.Sign(Rb.linearVelocity.x);
+
+        // Small boost at slide start for responsiveness
+        float boostedSpeed = absVelX * Data.slideBoostMultiplier * slideDirection;
+        Rb.linearVelocity = new Vector2(boostedSpeed, Rb.linearVelocity.y);
+        currentMaxSpeed = Mathf.Abs(boostedSpeed);
+    }
+
+    /// <summary>
+    /// Apply slide friction. Call every FixedUpdate during any slide (wave-land or ground slide).
+    /// Slope-aware: on slopes, velocity is projected along the ground surface so
+    /// downhill slopes accelerate slides and uphill slopes decelerate them.
     /// Returns true if the slide is still active, false if it ended.
     /// </summary>
-    public bool UpdateWaveLand(float input)
+    public bool UpdateSlide(float input)
     {
-        if (!IsWaveLanding) return false;
+        if (!IsSliding) return false;
 
         float absVelX = Mathf.Abs(Rb.linearVelocity.x);
 
         // End slide if speed drops below threshold or player reverses input
-        bool inputReversing = Mathf.Abs(input) > 0.1f && Mathf.Sign(input) != waveLandDirection;
+        bool inputReversing = Mathf.Abs(input) > 0.1f && Mathf.Sign(input) != slideDirection;
         if (absVelX < 1f || inputReversing)
         {
-            EndWaveLand();
+            EndSlide();
             return false;
         }
 
-        // Apply friction to slow the slide
-        float friction = Data.waveLandFriction * Time.fixedDeltaTime;
-        float newVelX = Mathf.MoveTowards(Rb.linearVelocity.x, 0f, friction);
-        Rb.linearVelocity = new Vector2(newVelX, Rb.linearVelocity.y);
+        // Use wave-land friction for wave-lands, slide friction for ground slides
+        float friction = IsWaveLanding ? Data.waveLandFriction : Data.slideFriction;
+        float frictionStep = friction * Time.fixedDeltaTime;
+
+        if (physics != null && physics.IsOnSlope)
+        {
+            // Slope-aware sliding: project velocity along the ground surface.
+            // The slope tangent is perpendicular to the ground normal.
+            Vector2 normal = physics.GroundNormal;
+            Vector2 slopeTangent = new Vector2(normal.y, -normal.x);
+
+            // Ensure tangent points in the slide direction
+            if (Vector2.Dot(slopeTangent, Vector2.right * slideDirection) < 0)
+                slopeTangent = -slopeTangent;
+
+            // Get current speed along the slope surface
+            float slopeSpeed = Vector2.Dot(Rb.linearVelocity, slopeTangent);
+
+            // On downhill slopes, gravity component along slope adds speed.
+            // On uphill slopes, gravity component along slope subtracts speed.
+            // Gravity is handled by Unity physics — we just apply friction.
+            float newSpeed = Mathf.MoveTowards(slopeSpeed, 0f, frictionStep);
+
+            // Set velocity along the slope tangent
+            Rb.linearVelocity = slopeTangent * newSpeed;
+        }
+        else
+        {
+            // Flat ground: pure horizontal friction
+            float newVelX = Mathf.MoveTowards(Rb.linearVelocity.x, 0f, frictionStep);
+            Rb.linearVelocity = new Vector2(newVelX, Rb.linearVelocity.y);
+        }
 
         // Decay currentMaxSpeed with the slide
-        currentMaxSpeed = Mathf.Max(Data.moveSpeed, Mathf.Abs(newVelX));
+        currentMaxSpeed = Mathf.Max(Data.moveSpeed, absVelX);
 
         return true;
     }
 
-    public void EndWaveLand()
+    /// <summary>
+    /// End any active slide. Optionally preserves horizontal momentum for wave-jump.
+    /// </summary>
+    public void EndSlide(bool preserveMomentum = false)
     {
+        float currentVelX = Rb.linearVelocity.x;
         IsWaveLanding = false;
-        currentMaxSpeed = Data.moveSpeed;
+        IsSliding = false;
+        if (!preserveMomentum)
+            currentMaxSpeed = Data.moveSpeed;
+        else
+            currentMaxSpeed = Mathf.Max(Data.moveSpeed, Mathf.Abs(currentVelX));
     }
+
+    // Legacy name for backward compat
+    public void EndWaveLand() => EndSlide();
+
+    /// <summary>
+    /// Update the old-API wave-land call. Delegates to unified UpdateSlide.
+    /// </summary>
+    public bool UpdateWaveLand(float input) => UpdateSlide(input);
 
     // =========================================================
     // Jump / Wall Jump

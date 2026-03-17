@@ -80,6 +80,9 @@ public class ModularArenaBuilder : MonoBehaviour
                 case ArenaPieceData.PieceType.KillZone:
                     BuildKillZone(placement);
                     break;
+                case ArenaPieceData.PieceType.MovingPlatform:
+                    BuildMovingPlatform(placement);
+                    break;
             }
         }
 
@@ -293,6 +296,33 @@ public class ModularArenaBuilder : MonoBehaviour
                 chestSpawns.Add(go.transform);
                 break;
         }
+    }
+
+    private void BuildMovingPlatform(ArenaPlacement placement)
+    {
+        var piece = placement.piece;
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        go.name = $"MovingPlatform_{piece.pieceName}";
+        go.transform.parent = arenaRoot.transform;
+        go.transform.position = new Vector3(placement.position.x, placement.position.y, 0);
+        go.transform.localScale = new Vector3(piece.size.x, piece.size.y, 1);
+
+        SetupVisual(go, piece.pieceColor);
+
+        // Remove 3D collider, add 2D
+        var collider3D = go.GetComponent<Collider>();
+        if (collider3D != null) DestroyImmediate(collider3D);
+
+        go.AddComponent<BoxCollider2D>().size = Vector2.one;
+
+        // Add MovingPlatform component with settings from piece data
+        var mp = go.AddComponent<MovingPlatform>();
+        mp.moveDirection = piece.moveDirection;
+        mp.amplitude = piece.moveAmplitude;
+        mp.speed = piece.moveSpeed;
+
+        go.layer = LayerMask.NameToLayer("Ground");
+        if (go.layer == -1) go.layer = 0;
     }
 
     private void BuildKillZone(ArenaPlacement placement)

@@ -22,8 +22,6 @@ public class SetupTestScene : Editor
         var wizardClass = AssetDatabase.LoadAssetAtPath<ClassData>($"{DataRoot}/Classes/Wizard.asset");
         var warriorClass = AssetDatabase.LoadAssetAtPath<ClassData>($"{DataRoot}/Classes/Warrior.asset");
         var gameSettings = AssetDatabase.LoadAssetAtPath<GameSettings>($"{DataRoot}/Settings/DefaultGameSettings.asset");
-        var sharedMovement = AssetDatabase.LoadAssetAtPath<MovementData>($"{DataRoot}/Movement/SharedMovement.asset");
-        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Player/PlayerCharacter.prefab");
 
         if (wizardClass == null || warriorClass == null || gameSettings == null)
         {
@@ -33,6 +31,7 @@ public class SetupTestScene : Editor
             return;
         }
 
+        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Player/PlayerCharacter.prefab");
         if (playerPrefab == null)
         {
             EditorUtility.DisplayDialog("Missing Prefab",
@@ -58,6 +57,44 @@ public class SetupTestScene : Editor
 
         // Save current scene
         EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+        DoSetup();
+
+        EditorUtility.DisplayDialog("Scene Created",
+            "Combat test scene saved to:\nAssets/Scenes/CombatTestArena.unity\n\n" +
+            "To test:\n" +
+            "1. Open the scene\n" +
+            "2. Enter Play mode\n" +
+            "3. Press any button/key to join\n" +
+            "4. Use WASD + mouse to play\n\n" +
+            "Default class: Wizard\n" +
+            "Up to 4 players can join with separate input devices.",
+            "OK");
+    }
+
+    /// <summary>
+    /// Creates the combat test scene without UI dialogs. Safe for batch mode.
+    /// Assumes prerequisites (assets + prefab) already exist.
+    /// Returns false if prerequisites are missing.
+    /// </summary>
+    public static bool DoSetup()
+    {
+        var wizardClass = AssetDatabase.LoadAssetAtPath<ClassData>($"{DataRoot}/Classes/Wizard.asset");
+        var warriorClass = AssetDatabase.LoadAssetAtPath<ClassData>($"{DataRoot}/Classes/Warrior.asset");
+        var gameSettings = AssetDatabase.LoadAssetAtPath<GameSettings>($"{DataRoot}/Settings/DefaultGameSettings.asset");
+        var sharedMovement = AssetDatabase.LoadAssetAtPath<MovementData>($"{DataRoot}/Movement/SharedMovement.asset");
+        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Player/PlayerCharacter.prefab");
+
+        if (wizardClass == null || warriorClass == null || gameSettings == null || sharedMovement == null)
+        {
+            Debug.LogError("[Spells] Missing data assets. Run SetupMVPAssets.DoSetup() first.");
+            return false;
+        }
+
+        if (playerPrefab == null)
+        {
+            Debug.LogError("[Spells] PlayerCharacter prefab not found.");
+            return false;
+        }
 
         // Create new scene
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -117,6 +154,40 @@ public class SetupTestScene : Editor
         SetField(arenaSerObj, "playerPrefab", playerPrefab);
         arenaSerObj.ApplyModifiedProperties();
 
+        // ── Procedural Level Generation ──
+        var modularBuilder = arenaGo.AddComponent<ModularArenaBuilder>();
+        var modBuilderSerObj = new SerializedObject(modularBuilder);
+        SetField(modBuilderSerObj, "multiCamera", multiCam);
+        modBuilderSerObj.ApplyModifiedProperties();
+
+        var levelGenerator = arenaGo.AddComponent<ProceduralLevelGenerator>();
+        var levelGenSerObj = new SerializedObject(levelGenerator);
+        SetField(levelGenSerObj, "movementData", sharedMovement);
+        // Load all biome assets
+        var biomeDir = "Assets/_Project/Data/Biomes";
+        string[] biomeNames = { "ForestTemple", "DesertRuins", "VolcanicCaldera", "CrystalCavern", "StormCitadel" };
+        var biomesProp = levelGenSerObj.FindProperty("biomePool");
+        if (biomesProp != null)
+        {
+            biomesProp.arraySize = biomeNames.Length;
+            for (int i = 0; i < biomeNames.Length; i++)
+            {
+                var biome = AssetDatabase.LoadAssetAtPath<BiomeData>($"{biomeDir}/{biomeNames[i]}.asset");
+                if (biome != null)
+                    biomesProp.GetArrayElementAtIndex(i).objectReferenceValue = biome;
+                else
+                    Debug.LogWarning($"[Spells] Biome asset not found: {biomeNames[i]}.asset — run Spells → Setup Biomes first.");
+            }
+        }
+        levelGenSerObj.ApplyModifiedProperties();
+
+        // Wire MatchManager to procedural generation
+        var matchSerObj2 = new SerializedObject(matchManager);
+        SetField(matchSerObj2, "arenaBuilder", modularBuilder);
+        SetField(matchSerObj2, "levelGenerator", levelGenerator);
+        SetField(matchSerObj2, "spawnManager", null); // Will be set below after creation
+        matchSerObj2.ApplyModifiedProperties();
+
         // ── Player Spawn Manager (on same object as arena) ──
         var spawnManager = arenaGo.AddComponent<PlayerSpawnManager>();
         var spawnSerObj = new SerializedObject(spawnManager);
@@ -124,6 +195,11 @@ public class SetupTestScene : Editor
         SetField(spawnSerObj, "multiTargetCamera", multiCam);
         SetField(spawnSerObj, "matchManager", matchManager);
         spawnSerObj.ApplyModifiedProperties();
+
+        // Wire spawn manager into MatchManager
+        var matchSerObj3 = new SerializedObject(matchManager);
+        SetField(matchSerObj3, "spawnManager", spawnManager);
+        matchSerObj3.ApplyModifiedProperties();
 
         // ── Lighting ──
         var lightGo = new GameObject("Directional Light");
@@ -140,17 +216,7 @@ public class SetupTestScene : Editor
 
         Debug.Log($"[Spells] ✓ Test scene created at: {scenePath}");
         Debug.Log("[Spells] To play: Open the scene, enter Play mode, press any button to join as a player.");
-
-        EditorUtility.DisplayDialog("Scene Created",
-            $"Combat test scene saved to:\n{scenePath}\n\n" +
-            "To test:\n" +
-            "1. Open the scene\n" +
-            "2. Enter Play mode\n" +
-            "3. Press any button/key to join\n" +
-            "4. Use WASD + mouse to play\n\n" +
-            "Default class: Wizard\n" +
-            "Up to 4 players can join with separate input devices.",
-            "OK");
+        return true;
     }
 
     private static void WireMatchManager(MatchManager match, RoundManager round,

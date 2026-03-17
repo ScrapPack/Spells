@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db0c08c3ec84c460285b48b9910eb59c, type: 3}
+  m_Name: HeavyThrow
+  m_EditorClassIdentifier: Spells::PowerCardData
+  cardName: Heavy Throw
+  positiveDescription: "\u2726 Axes deal 2x damage and pierce through targets"
+  negativeDescription: "\u2717 Axes travel 50% slower"
+  tier: 1
+  classTags:
+  - General
+  - Warrior
+  positiveEffects:
+  - target: 5
+    modType: 1
+    value: 2
+  negativeEffects:
+  - target: 4
+    modType: 1
+    value: 0.5
+  stackCap: 2
+  hasSpecialBehavior: 1
+  specialBehaviorID: heavy_throw
+  cardArt: {fileID: 0}
+  cardColor: {r: 0.7, g: 0.3, b: 0.1, a: 1}

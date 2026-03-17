@@ -76,6 +76,14 @@ public class ProjectileSpawner : MonoBehaviour
 
         // Aim direction: use input aim or face direction
         Vector2 aimDir = input.AimDirection;
+
+        // Mouse gives screen-space position — convert to world-space direction from player
+        if (aimDir.sqrMagnitude > 100f && Camera.main != null)
+        {
+            Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(aimDir.x, aimDir.y, 0f));
+            aimDir = ((Vector2)worldPos - (Vector2)transform.position).normalized;
+        }
+
         if (aimDir.sqrMagnitude < 0.01f)
         {
             // Default: face direction based on movement or last facing

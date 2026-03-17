@@ -29,6 +29,33 @@ public class TestArenaBuilder : MonoBehaviour
             return;
         }
 
+        // Check if procedural generation is available on the same GameObject
+        var levelGenerator = GetComponent<ProceduralLevelGenerator>();
+        var modularBuilder = GetComponent<ModularArenaBuilder>();
+
+        if (levelGenerator != null && modularBuilder != null)
+        {
+            // Use procedural generation instead of the static test arena
+            var layout = levelGenerator.GenerateForRound(1);
+            if (layout != null)
+            {
+                modularBuilder.Build(layout);
+                SetupCamera();
+
+                // Set camera background to biome color
+                if (levelGenerator.LastUsedBiome != null && Camera.main != null)
+                    Camera.main.backgroundColor = levelGenerator.LastUsedBiome.backgroundColor;
+
+                if (playerPrefab != null)
+                    SetupPlayerSpawningWithSpawns(modularBuilder.PlayerSpawnPoints);
+
+                Debug.Log($"TestArenaBuilder: Procedural arena built — {layout.arenaName}");
+                return;
+            }
+
+            Debug.LogWarning("TestArenaBuilder: Procedural generation failed, falling back to static arena.");
+        }
+
         BuildArena();
         SetupCamera();
 
@@ -400,6 +427,15 @@ public class TestArenaBuilder : MonoBehaviour
             spawnPoints[i] = sp.transform;
         }
 
+        SetupPlayerSpawningWithSpawns(spawnPoints);
+    }
+
+    /// <summary>
+    /// Wire up PlayerSpawnManager + PlayerInputManager with provided spawn points.
+    /// Used by both the static arena path and the procedural generation path.
+    /// </summary>
+    private void SetupPlayerSpawningWithSpawns(Transform[] spawnPoints)
+    {
         // Set up PlayerSpawnManager FIRST (before PlayerInputManager can fire events)
         var spawnManager = gameObject.GetComponent<PlayerSpawnManager>();
         if (spawnManager == null)

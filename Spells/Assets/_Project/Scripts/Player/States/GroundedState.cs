@@ -16,10 +16,19 @@ public class GroundedState : IPlayerState
         ctx.CoyoteTimer = 0f;
         waveLandGraceTimer = WAVE_LAND_GRACE;
 
+        // Pick the best pre-landing velocity — compare HORIZONTAL speed only.
+        // The old code compared .magnitude which picked whichever had more
+        // total velocity (including vertical). This caused fast-fall vertical
+        // speed to dominate the comparison and feed into wave-land.
+        Vector2 bestVel = ctx.PreLandingVelocity;
+        Vector2 prevVel = ctx.AirborneState.PreviousVelocity;
+        if (Mathf.Abs(prevVel.x) > Mathf.Abs(bestVel.x))
+            bestVel = prevVel;
+
         // Try wave-land immediately on landing
         if (ctx.Input.CrouchHeld)
         {
-            ctx.Controller.StartWaveLand(ctx.PreLandingVelocity);
+            ctx.Controller.StartWaveLand(bestVel);
             waveLandGraceTimer = 0f; // Consumed
         }
 
@@ -43,16 +52,40 @@ public class GroundedState : IPlayerState
             waveLandGraceTimer -= Time.deltaTime;
             if (ctx.Input.CrouchHeld)
             {
-                ctx.Controller.StartWaveLand(ctx.PreLandingVelocity);
+                // Use the better horizontal velocity of current or previous frame
+                Vector2 bestVel = ctx.PreLandingVelocity;
+                Vector2 prevVel = ctx.AirborneState.PreviousVelocity;
+                if (Mathf.Abs(prevVel.x) > Mathf.Abs(bestVel.x))
+                    bestVel = prevVel;
+                ctx.Controller.StartWaveLand(bestVel);
                 waveLandGraceTimer = 0f;
             }
         }
 
-        // Jump (also cancels wave-land)
+        // Ground slide: crouch while running (and not already sliding)
+        if (ctx.Input.CrouchHeld && !ctx.Controller.IsSliding && !ctx.Controller.IsWaveLanding)
+        {
+            ctx.Controller.StartGroundSlide();
+        }
+        // Release crouch to end ground slide (but not wave-land — wave-land ends on its own)
+        else if (!ctx.Input.CrouchHeld && ctx.Controller.IsSliding && !ctx.Controller.IsWaveLanding)
+        {
+            ctx.Controller.EndSlide();
+        }
+
+        // Jump — wave-jump preserves slide momentum, normal jump doesn't
         if (ctx.Input.JumpPressed)
         {
             ctx.Input.ConsumeJump();
-            ctx.Controller.EndWaveLand();
+            if (ctx.Controller.IsSliding)
+            {
+                // Wave-jump: preserve horizontal momentum through the jump
+                ctx.Controller.EndSlide(preserveMomentum: true);
+            }
+            else
+            {
+                ctx.Controller.EndSlide();
+            }
             ctx.Controller.ApplyJumpForce();
             ctx.ChangeState(ctx.AirborneState);
             return;
@@ -61,7 +94,7 @@ public class GroundedState : IPlayerState
         // Fell off edge — transition to airborne with coyote time
         if (!ctx.Physics.IsGrounded)
         {
-            ctx.Controller.EndWaveLand();
+            ctx.Controller.EndSlide();
             ctx.CoyoteTimer = ctx.Controller.Data.coyoteTimeDuration;
             ctx.ChangeState(ctx.AirborneState);
             return;
@@ -72,8 +105,8 @@ public class GroundedState : IPlayerState
     {
         float input = ctx.Input.MoveInput.x;
 
-        // Wave-land slide takes priority over normal movement
-        if (ctx.Controller.UpdateWaveLand(input))
+        // Any active slide (wave-land or ground slide) takes priority over normal movement
+        if (ctx.Controller.UpdateSlide(input))
             return;
 
         // Dash burst + normal ground movement
@@ -97,5 +130,6 @@ public class GroundedState : IPlayerState
     public void Exit()
     {
         ctx.Controller.ResetDashBurst();
+        // Don't end slide here — wave-jump needs it to persist through state transition
     }
 }

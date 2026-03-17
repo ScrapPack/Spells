@@ -19,6 +19,16 @@ public class ClassManager : MonoBehaviour
     private ProjectileSpawner spawner;
     private ParrySystem parry;
 
+    private void Start()
+    {
+        // Auto-initialize if no external system (PlayerSpawnManager) called Initialize()
+        if (CombatData == null && classData != null)
+        {
+            var identity = GetComponent<PlayerIdentity>();
+            Initialize(classData, identity != null ? identity.PlayerID : 0);
+        }
+    }
+
     /// <summary>
     /// Initialize this player as a specific class. Can be called at spawn
     /// or when switching classes in character select.

@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85f86d87350454b05994a79678f16485, type: 3}
+  m_Name: CrystalCavern
+  m_EditorClassIdentifier: Spells::BiomeData
+  biomeName: Crystal Cavern
+  description: A subterranean arena of gleaming crystal formations. Clean sightlines
+    and classic platform layout for pure combat.
+  structureType: 4
+  arenaBounds: {x: 38, y: 22}
+  groundCoverage: 0.75
+  groundGapCount: 0
+  gapWidthRange: {x: 3, y: 6}
+  groundThickness: 1
+  platformCount: 6
+  platformWidthRange: {x: 4, y: 8}
+  platformThicknessRange: {x: 0.5, y: 0.8}
+  platformLevels: 3
+  maxPlatformHeight: 10
+  wallCount: 4
+  wallHeightRange: {x: 3, y: 6}
+  wallThickness: 0.7
+  rampCount: 2
+  rampAngleRange: {x: 20, y: 30}
+  rampLengthRange: {x: 3, y: 5}
+  hasBottomKillZone: 0
+  killZoneCount: 0
+  killZoneSizeRange: {x: 3, y: 6}
+  movingPlatformCount: 0
+  moveAmplitudeRange: {x: 1, y: 3}
+  moveSpeedRange: {x: 0.5, y: 1.5}
+  movePlatformAxis: 0
+  monsterCount: 2
+  chestCount: 3
+  groundColor: {r: 0.25, g: 0.25, b: 0.35, a: 1}
+  platformColor: {r: 0.35, g: 0.3, b: 0.5, a: 1}
+  wallColor: {r: 0.3, g: 0.28, b: 0.45, a: 1}
+  hazardColor: {r: 0.5, g: 0.3, b: 0.8, a: 0.3}
+  backgroundColor: {r: 0.04, g: 0.03, b: 0.08, a: 1}
+  hasBoundaryWalls: 1
+  hasCeiling: 1

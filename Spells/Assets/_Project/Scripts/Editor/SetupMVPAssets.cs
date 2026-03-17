@@ -35,6 +35,19 @@ public class SetupMVPAssets : EditorWindow
             return;
         }
 
+        DoSetup();
+
+        EditorUtility.DisplayDialog("Setup Complete",
+            "All MVP assets created successfully.\n\n" +
+            "Next step: Use Spells → Setup Test Scene to create a playable arena.",
+            "OK");
+    }
+
+    /// <summary>
+    /// Performs all asset creation without UI dialogs. Safe for batch mode.
+    /// </summary>
+    public static void DoSetup()
+    {
         CreateFolders();
 
         // Combat Data
@@ -69,10 +82,6 @@ public class SetupMVPAssets : EditorWindow
         AssetDatabase.Refresh();
 
         Debug.Log("[Spells] ✓ MVP asset setup complete! All ScriptableObjects and prefabs created.");
-        EditorUtility.DisplayDialog("Setup Complete",
-            "All MVP assets created successfully.\n\n" +
-            "Next step: Use Spells → Setup Test Scene to create a playable arena.",
-            "OK");
     }
 
     // ─────────────────────────────── FOLDERS ───────────────────────────────

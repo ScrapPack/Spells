@@ -45,6 +45,14 @@ public class PlayerSpawnManager : MonoBehaviour
         isInitialized = true;
     }
 
+    /// <summary>
+    /// Update spawn points for a new arena layout (called by MatchManager between rounds).
+    /// </summary>
+    public void SetSpawnPoints(Transform[] spawns)
+    {
+        spawnPoints = spawns;
+    }
+
     private void OnEnable()
     {
         // Only auto-subscribe if references were set via inspector (not runtime)

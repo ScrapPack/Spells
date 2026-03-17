@@ -13,6 +13,7 @@ using UnityEngine;
 /// - Gap: empty space (no geometry, but defines a hole in the bridge)
 /// - SpawnPoint: invisible marker for player/monster/chest spawn positions
 /// - KillZone: damage trigger zone (uses EnvironmentHazard)
+/// - MovingPlatform: platform that oscillates along an axis (uses MovingPlatform component)
 /// </summary>
 [CreateAssetMenu(fileName = "ArenaPieceData", menuName = "Spells/Arena Piece Data")]
 public class ArenaPieceData : ScriptableObject
@@ -25,7 +26,8 @@ public class ArenaPieceData : ScriptableObject
         Ramp,
         Gap,
         SpawnPoint,
-        KillZone
+        KillZone,
+        MovingPlatform
     }
 
     public enum SpawnPointType
@@ -52,6 +54,14 @@ public class ArenaPieceData : ScriptableObject
     [Header("Kill Zone")]
     [Tooltip("Damage dealt by kill zone per tick")]
     [Range(1f, 100f)] public float killZoneDamage = 100f;
+
+    [Header("Moving Platform")]
+    [Tooltip("Direction of oscillation (only used for PieceType.MovingPlatform)")]
+    public Vector2 moveDirection = Vector2.up;
+    [Tooltip("How far the platform travels from its origin")]
+    [Range(0.5f, 5f)] public float moveAmplitude = 2f;
+    [Tooltip("Oscillation speed (cycles per second)")]
+    [Range(0.1f, 3f)] public float moveSpeed = 1f;
 
     [Header("Visual")]
     public Color pieceColor = new Color(0.4f, 0.4f, 0.4f, 1f);

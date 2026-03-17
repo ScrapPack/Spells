@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85f86d87350454b05994a79678f16485, type: 3}
+  m_Name: DesertRuins
+  m_EditorClassIdentifier: Spells::BiomeData
+  biomeName: Desert Ruins
+  description: Crumbling sandstone bridges span ancient gaps. Long horizontal traversal
+    across a ruined desert temple.
+  structureType: 2
+  arenaBounds: {x: 48, y: 22}
+  groundCoverage: 0.55
+  groundGapCount: 3
+  gapWidthRange: {x: 4, y: 7}
+  groundThickness: 0.8
+  platformCount: 8
+  platformWidthRange: {x: 4, y: 10}
+  platformThicknessRange: {x: 0.4, y: 0.7}
+  platformLevels: 2
+  maxPlatformHeight: 8
+  wallCount: 2
+  wallHeightRange: {x: 3, y: 6}
+  wallThickness: 1.2
+  rampCount: 1
+  rampAngleRange: {x: 15, y: 25}
+  rampLengthRange: {x: 4, y: 6}
+  hasBottomKillZone: 1
+  killZoneCount: 0
+  killZoneSizeRange: {x: 3, y: 6}
+  movingPlatformCount: 0
+  moveAmplitudeRange: {x: 1, y: 3}
+  moveSpeedRange: {x: 0.5, y: 1.5}
+  movePlatformAxis: 0
+  monsterCount: 1
+  chestCount: 3
+  groundColor: {r: 0.55, g: 0.45, b: 0.3, a: 1}
+  platformColor: {r: 0.5, g: 0.4, b: 0.28, a: 1}
+  wallColor: {r: 0.45, g: 0.38, b: 0.25, a: 1}
+  hazardColor: {r: 0.6, g: 0.4, b: 0.1, a: 0.4}
+  backgroundColor: {r: 0.12, g: 0.08, b: 0.04, a: 1}
+  hasBoundaryWalls: 1
+  hasCeiling: 0

@@ -18,6 +18,17 @@ GameObject:
   - component: {fileID: 2994582850810502703}
   - component: {fileID: 5826175214802945321}
   - component: {fileID: 513964304074555544}
+  - component: {fileID: 2347632896717040664}
+  - component: {fileID: 5755721817786505159}
+  - component: {fileID: 291442643838313215}
+  - component: {fileID: 1638514607103401509}
+  - component: {fileID: 4915595306089387072}
+  - component: {fileID: 8082050410347659473}
+  - component: {fileID: 7837249801110365159}
+  - component: {fileID: 1301436438173859603}
+  - component: {fileID: 7142777740058564890}
+  - component: {fileID: 6822660212077275953}
+  - component: {fileID: 9131120934115319320}
   m_Layer: 3
   m_Name: PlayerCharacter
   m_TagString: Untagged
@@ -213,7 +224,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a2eaea23523e354183369c6e9810e04, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerInputHandler
+  m_EditorClassIdentifier: Spells::PlayerInputHandler
 --- !u!114 &7429035493088425037
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -225,7 +236,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eca830c895ff04746b71032be881731b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PhysicsCheck
+  m_EditorClassIdentifier: Spells::PhysicsCheck
   groundCheckOffset: {x: 0, y: -0.5}
   groundCheckSize: {x: 0.4, y: 0.04}
   groundLayer:
@@ -237,6 +248,7 @@ MonoBehaviour:
     m_Bits: 0
   ceilingCheckOffset: {x: 0, y: 0.5}
   ceilingCheckSize: {x: 0.4, y: 0.04}
+  groundRayDistance: 0.7
 --- !u!114 &2994582850810502703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -248,8 +260,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1d064d50341b56f4ba34955f9385e5ba, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  baseMovementData: {fileID: 11400000, guid: 99533952e86712346ba9967388285daf, type: 2}
+  m_EditorClassIdentifier: Spells::PlayerController
+  baseMovementData: {fileID: 11400000, guid: bbd0b9d16ce114946bdf87610aa2d75b, type: 2}
 --- !u!114 &5826175214802945321
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -261,7 +273,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05752278478022b468f89392c5083761, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerStateMachine
+  m_EditorClassIdentifier: Spells::PlayerStateMachine
 --- !u!114 &513964304074555544
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -273,5 +285,186 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5850472b542d05b44810f40532fc081e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DebugOverlay
+  m_EditorClassIdentifier: Spells::DebugOverlay
   showDebug: 1
+--- !u!114 &2347632896717040664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 711dfbb0c3057413f82f9ee657a8dd98, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::PlayerIdentity
+--- !u!114 &5755721817786505159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5457be7e22f8340c89b17840439209cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::ClassManager
+  classData: {fileID: 0}
+--- !u!114 &291442643838313215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c26aac848503744c6b920b4c663b6e50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::HealthSystem
+  OnHealthChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDamaged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDeath:
+    m_PersistentCalls:
+      m_Calls: []
+  OnHealed:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &1638514607103401509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a62307208a9ca4d5f8fc16c0ebbd5c35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::ProjectileSpawner
+  projectilePrefab: {fileID: 0}
+  muzzleOffset: {x: 0.5, y: 0}
+  OnProjectileFired:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &4915595306089387072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0829c2bdb42d94e9fba8db5e632d1a6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::ParrySystem
+  OnParryStart:
+    m_PersistentCalls:
+      m_Calls: []
+  OnParrySuccess:
+    m_PersistentCalls:
+      m_Calls: []
+  OnParryWhiff:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &8082050410347659473
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dd62859112e3494c862c9735f9f614b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::CombatEventRouter
+--- !u!114 &7837249801110365159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d31937da26b1643f48b4a38e2f89de71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::SpawnProtection
+  protectionDuration: 1.5
+  blinkRate: 15
+--- !u!114 &1301436438173859603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76d50bea21bd84a3f8227a46a12b3c55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::CardInventory
+  OnCardAdded:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &7142777740058564890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 873fbf1f5fe724a928e986fb6dab4dc0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::ProjectileModifierSystem
+--- !u!114 &6822660212077275953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3df6321ec95aa4a88922827787136817, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::PlayerDeathHandler
+  deathDelay: 1
+  deactivateOnDeath: 1
+  OnDeathSequenceStart:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDeathSequenceComplete:
+    m_PersistentCalls:
+      m_Calls: []
+  OnRevived:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &9131120934115319320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7448692061287126237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d5ef21487ec4470e91204df2688b13f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Spells::PlayerVisualFeedback
+  spriteRenderer: {fileID: 0}
+  damageFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  damageFlashDuration: 0.1
+  parryActiveColor: {r: 1, g: 1, b: 0, a: 1}
+  parrySuccessColor: {r: 0, g: 1, b: 1, a: 1}
+  blinkRate: 10

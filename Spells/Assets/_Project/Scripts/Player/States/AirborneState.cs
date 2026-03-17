@@ -5,12 +5,21 @@ public class AirborneState : IPlayerState
     private PlayerStateMachine ctx;
     private int airJumpsUsed;
     private bool jumpCut;
+    private bool isFastFalling;
+
+    /// <summary>
+    /// Previous frame's velocity — used as fallback for wave-land when
+    /// collision resolution zeros the velocity before we can read it.
+    /// </summary>
+    public Vector2 PreviousVelocity { get; private set; }
 
     public void Enter(PlayerStateMachine ctx)
     {
         this.ctx = ctx;
         airJumpsUsed = 0;
         jumpCut = false;
+        isFastFalling = false;
+        PreviousVelocity = Vector2.zero;
     }
 
     public void Execute()
@@ -65,9 +74,13 @@ public class AirborneState : IPlayerState
             }
         }
 
-        // Wall slide: touching wall + holding toward it + falling
+        // Wall slide: touching wall + holding toward it + not rising fast
+        // Allow wall grab while slightly rising (vy <= 2) so wall-jump chains
+        // work — after a wall-jump (vy=16), the player reaches the opposite wall
+        // at ~0.42s while still at vy≈3.6. Requiring vy<=0 blocks the chain.
+        // On contact, zero vertical velocity for clean wall-slide entry.
         if (ctx.Physics.IsTouchingWall
-            && ctx.Controller.Rb.linearVelocity.y <= 0f
+            && ctx.Controller.Rb.linearVelocity.y <= 2f
             && ctx.WallJumpLockoutTimer <= 0f)
         {
             float inputX = ctx.Input.MoveInput.x;
@@ -75,6 +88,10 @@ public class AirborneState : IPlayerState
                                   || (ctx.Physics.WallDirection == -1 && inputX < -0.1f);
             if (holdingTowardWall)
             {
+                // Zero vertical velocity on wall grab for clean slide start
+                ctx.Controller.Rb.linearVelocity = new Vector2(
+                    ctx.Controller.Rb.linearVelocity.x,
+                    Mathf.Min(ctx.Controller.Rb.linearVelocity.y, 0f));
                 ctx.ChangeState(ctx.WallSlideState);
                 return;
             }
@@ -83,8 +100,12 @@ public class AirborneState : IPlayerState
 
     public void FixedExecute()
     {
-        // Record velocity BEFORE physics changes it — used by wave-land on landing
-        ctx.PreLandingVelocity = ctx.Controller.Rb.linearVelocity;
+        // Two-frame velocity buffer for wave-land:
+        // Collision resolution can zero velocity in the same FixedUpdate we land,
+        // so keep the previous frame's velocity as a fallback.
+        Vector2 currentVel = ctx.Controller.Rb.linearVelocity;
+        PreviousVelocity = ctx.PreLandingVelocity;
+        ctx.PreLandingVelocity = currentVel;
 
         // Air control (reduced acceleration)
         if (ctx.WallJumpLockoutTimer <= 0f)
@@ -93,10 +114,32 @@ public class AirborneState : IPlayerState
             ctx.Controller.MoveHorizontal(input, ctx.Controller.Data.airAcceleration, ctx.Controller.Data.airDeceleration);
         }
 
-        // Three-zone gravity system: fall / peak / rising
-        // Now takes jumpHeld so the peak zone and variable height work correctly
-        ctx.Controller.ApplyFallGravity(ctx.Input.JumpHeld);
-        ctx.Controller.ClampFallSpeed();
+        // Fast fall: Celeste-style — holding down while falling.
+        // Instead of cranking gravity (which felt heavy and clunky), use normal
+        // fall gravity and accelerate toward fastFallMaxSpeed with MoveTowards.
+        // This gives a snappy, controlled fast-fall that's purely vertical.
+        isFastFalling = ctx.Input.CrouchHeld && ctx.Controller.Rb.linearVelocity.y <= 0f;
+        if (isFastFalling)
+        {
+            // Normal three-zone gravity system — no special gravity multiplier
+            ctx.Controller.ApplyFallGravity(ctx.Input.JumpHeld);
+
+            // Accelerate toward fastFallMaxSpeed (Celeste does 300 units/s²)
+            // Using the fastFallGravityMultiplier as an acceleration scaler
+            float fastFallAccel = ctx.Controller.Data.fastFallGravityMultiplier
+                                * ctx.Controller.Data.gravityScale * 3f;
+            float vy = ctx.Controller.Rb.linearVelocity.y;
+            float targetVy = -ctx.Controller.Data.fastFallMaxSpeed;
+            float newVy = Mathf.MoveTowards(vy, targetVy, fastFallAccel * Time.fixedDeltaTime);
+            ctx.Controller.Rb.linearVelocity = new Vector2(
+                ctx.Controller.Rb.linearVelocity.x, newVy);
+        }
+        else
+        {
+            // Normal three-zone gravity system: fall / peak / rising
+            ctx.Controller.ApplyFallGravity(ctx.Input.JumpHeld);
+            ctx.Controller.ClampFallSpeed();
+        }
     }
 
     public void Exit()
