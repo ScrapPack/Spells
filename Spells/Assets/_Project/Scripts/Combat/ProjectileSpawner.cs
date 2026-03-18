@@ -4,7 +4,9 @@ using UnityEngine.Events;
 /// <summary>
 /// Handles projectile firing for a player. Reads CombatData for timing and
 /// projectile configuration, creates projectiles on shoot input.
-/// Supports ammo-limited classes (Warrior axes).
+///
+/// Ammo system: starts with <see cref="startAmmo"/> shots. When fully depleted,
+/// automatically refills after <see cref="refillTime"/> seconds.
 /// </summary>
 public class ProjectileSpawner : MonoBehaviour
 {
@@ -14,21 +16,54 @@ public class ProjectileSpawner : MonoBehaviour
     [Tooltip("Offset from player center where projectile spawns")]
     [SerializeField] private Vector2 muzzleOffset = new Vector2(0.5f, 0f);
 
+    [Header("Ammo")]
+    [Tooltip("Number of shots before a reload is required.")]
+    [SerializeField] private int startAmmo = 3;
+    [Tooltip("Seconds until ammo fully refills after the last shot is used.")]
+    [SerializeField] private float refillTime = 5f;
+
     [Header("Events")]
     public UnityEvent OnProjectileFired;
+    public UnityEvent OnAmmoRefilled;
+
+    // ── Public state ──────────────────────────────────────────────────────────
 
     public int CurrentAmmo { get; private set; }
-    public bool HasAmmo => !usesAmmo || CurrentAmmo > 0;
+    public int MaxAmmo => startAmmo;
+    public bool HasAmmo => CurrentAmmo > 0;
+
+    /// <summary>Seconds remaining until the next full refill (0 when not reloading).</summary>
+    public float RefillCountdown { get; private set; }
+
+    /// <summary>0–1 progress toward the next refill (1 = full / not reloading).</summary>
+    public float RefillProgress => refillTime > 0f ? 1f - (RefillCountdown / refillTime) : 1f;
+
+    /// <summary>Configurable refill duration. Writable so SpellEffects can tune it.</summary>
+    public float RefillTime
+    {
+        get => refillTime;
+        set => refillTime = Mathf.Max(0f, value);
+    }
+
+    /// <summary>Projectile speed pulled from the cloned CombatData. Writable per-player.</summary>
+    public float ProjectileSpeed
+    {
+        get => combatData != null ? combatData.projectileSpeed : 0f;
+        set { if (combatData != null) combatData.projectileSpeed = value; }
+    }
 
     /// <summary>Reference to the most recently fired projectile (for SpellEffects to modify).</summary>
     public GameObject LastFiredProjectile { get; private set; }
+
+    // ── Private state ─────────────────────────────────────────────────────────
 
     private CombatData combatData;
     private PlayerIdentity identity;
     private IInputProvider input;
     private BoxCollider2D col;
     private float fireCooldownTimer;
-    private bool usesAmmo;
+
+    // ── Initialization ────────────────────────────────────────────────────────
 
     /// <summary>
     /// Initialize with combat data. Called by ClassManager.
@@ -37,28 +72,43 @@ public class ProjectileSpawner : MonoBehaviour
     {
         combatData = data;
         if (prefab != null) projectilePrefab = prefab;
-
-        usesAmmo = combatData.maxAmmo > 0;
-        CurrentAmmo = combatData.maxAmmo;
         fireCooldownTimer = 0f;
+
+        // Seed ammo from SerializeField; ignore CombatData.maxAmmo for this scene.
+        CurrentAmmo    = startAmmo;
+        RefillCountdown = 0f;
     }
 
     private void Start()
     {
         identity = GetComponent<PlayerIdentity>();
-        input = GetComponent<IInputProvider>();
-        col = GetComponent<BoxCollider2D>();
+        input    = GetComponent<IInputProvider>();
+        col      = GetComponent<BoxCollider2D>();
 
         if (identity == null) Debug.LogError("ProjectileSpawner: No PlayerIdentity found!", this);
     }
+
+    // ── Update ────────────────────────────────────────────────────────────────
 
     private void Update()
     {
         if (combatData == null || input == null) return;
 
-        // Cooldown tick
+        // Fire cooldown
         if (fireCooldownTimer > 0f)
             fireCooldownTimer -= Time.deltaTime;
+
+        // Auto-refill when depleted
+        if (CurrentAmmo <= 0)
+        {
+            RefillCountdown -= Time.deltaTime;
+            if (RefillCountdown <= 0f)
+            {
+                CurrentAmmo     = startAmmo;
+                RefillCountdown = 0f;
+                OnAmmoRefilled?.Invoke();
+            }
+        }
 
         // Fire on shoot input
         if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo)
@@ -67,6 +117,8 @@ public class ProjectileSpawner : MonoBehaviour
             input.ConsumeShoot();
         }
     }
+
+    // ── Firing ────────────────────────────────────────────────────────────────
 
     private void Fire()
     {
@@ -82,7 +134,7 @@ public class ProjectileSpawner : MonoBehaviour
         if (input.AimDirection.sqrMagnitude > 0.01f && input.AimDirection.sqrMagnitude <= 1.5f)
             aimDir = input.AimDirection; // right stick
         else
-            aimDir = input.MoveInput;   // WASD or left stick
+            aimDir = input.MoveInput;    // WASD or left stick
 
         if (aimDir.sqrMagnitude < 0.01f)
         {
@@ -96,18 +148,16 @@ public class ProjectileSpawner : MonoBehaviour
 
         // Spawn position: use col.bounds (world-space AABB) so the center and extents
         // are correct even when the player is flipped via localScale.x = -1.
-        // Project extents onto aim direction to find the surface point, then add
-        // the projectile radius + a small gap so the circle never overlaps the hurtbox.
-        Vector2 center = col != null ? (Vector2)col.bounds.center : (Vector2)transform.position;
-        Vector2 half   = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
-        float clearance = Mathf.Abs(aimDir.x) * half.x
-                        + Mathf.Abs(aimDir.y) * half.y
-                        + combatData.projectileRadius + 0.1f;
-        Vector2 spawnPos = center + aimDir * clearance;
+        Vector2 center    = col != null ? (Vector2)col.bounds.center  : (Vector2)transform.position;
+        Vector2 half      = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
+        float   clearance = Mathf.Abs(aimDir.x) * half.x
+                          + Mathf.Abs(aimDir.y) * half.y
+                          + combatData.projectileRadius + 0.1f;
+        Vector2 spawnPos  = center + aimDir * clearance;
 
         // Create projectile
         GameObject projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
-        Projectile proj = projObj.GetComponent<Projectile>();
+        Projectile proj    = projObj.GetComponent<Projectile>();
 
         if (proj != null)
         {
@@ -132,18 +182,15 @@ public class ProjectileSpawner : MonoBehaviour
         // Apply projectile modifiers (homing, explosive, split, etc.)
         var modSystem = GetComponent<ProjectileModifierSystem>();
         if (modSystem != null)
-        {
             modSystem.ProcessProjectile(projObj);
-        }
 
-        // Store reference for SpellEffects (Magnetic Return, Venom Dart, etc.)
         LastFiredProjectile = projObj;
 
-        // Ammo
-        if (usesAmmo)
-            CurrentAmmo--;
+        // Consume ammo — start refill timer when the last shot is fired
+        CurrentAmmo--;
+        if (CurrentAmmo <= 0)
+            RefillCountdown = refillTime;
 
-        // Cooldown
         fireCooldownTimer = combatData.fireCooldown;
 
         // Analytics
@@ -151,26 +198,28 @@ public class ProjectileSpawner : MonoBehaviour
         if (analytics != null && identity != null)
             analytics.RecordProjectileFired(identity.PlayerID);
 
-        // Notify listeners (Blood Pact, etc.)
         OnProjectileFired?.Invoke();
     }
 
+    // ── External API ──────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Return ammo (Warrior picks up landed axe).
+    /// Return ammo (e.g. Warrior picks up a landed axe). Cancels refill if now non-empty.
     /// </summary>
     public void ReturnAmmo(int amount)
     {
-        if (!usesAmmo) return;
-        CurrentAmmo = Mathf.Min(CurrentAmmo + amount, combatData.maxAmmo);
+        CurrentAmmo = Mathf.Min(CurrentAmmo + amount, startAmmo);
+        if (CurrentAmmo > 0)
+            RefillCountdown = 0f;
     }
 
     /// <summary>
-    /// Reset for new round.
+    /// Reset for new round — full ammo, no cooldowns.
     /// </summary>
     public void ResetForRound()
     {
-        if (usesAmmo)
-            CurrentAmmo = combatData.maxAmmo;
+        CurrentAmmo     = startAmmo;
+        RefillCountdown = 0f;
         fireCooldownTimer = 0f;
     }
 }

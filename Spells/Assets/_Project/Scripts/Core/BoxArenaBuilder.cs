@@ -121,6 +121,9 @@ public class BoxArenaBuilder : MonoBehaviour
         players[0] = SpawnPlayer(0, player1Prefab ?? player2Prefab, player1ClassData);
         players[1] = SpawnPlayer(1, player2Prefab ?? player1Prefab, player2ClassData);
 
+        var hud = gameObject.AddComponent<PlayerHUDOverlay>();
+        hud.Initialize(players);
+
         StartCoroutine(BeginFirstFightNextFrame());
     }
 
