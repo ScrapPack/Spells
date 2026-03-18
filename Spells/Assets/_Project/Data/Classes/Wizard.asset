@@ -17,6 +17,7 @@ MonoBehaviour:
     straight projectiles, broadest card pool.
   combatData: {fileID: 11400000, guid: e41ca301c913049138ca1ff79ff3a28b, type: 2}
   projectilePrefab: {fileID: 6438706462536669029, guid: bf71a4fd108584758bcb415994ad798d, type: 3}
+  abilityClassName: WizardFireball
   cardPoolTags:
   - General
   - Wizard

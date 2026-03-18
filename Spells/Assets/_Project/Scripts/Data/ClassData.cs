@@ -21,6 +21,10 @@ public class ClassData : ScriptableObject
     [Tooltip("Prefab spawned when this class shoots")]
     public GameObject projectilePrefab;
 
+    [Header("Ability")]
+    [Tooltip("Class name of the ClassAbility script to add at runtime (e.g. WizardFireball, TeleportAbility)")]
+    public string abilityClassName;
+
     [Header("Card Pool")]
     [Tooltip("Tags identifying which power card pools this class draws from")]
     public string[] cardPoolTags = new string[] { "General" };

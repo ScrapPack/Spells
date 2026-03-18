@@ -13,6 +13,10 @@ public interface IInputProvider
     bool DashHeld { get; }
     void ConsumeDash();
 
+    // Special move input
+    bool SpecialPressed { get; }
+    void ConsumeSpecial();
+
     // Combat inputs
     bool ShootPressed { get; }
     bool ShootHeld { get; }

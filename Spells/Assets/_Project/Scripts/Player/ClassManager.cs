@@ -18,6 +18,7 @@ public class ClassManager : MonoBehaviour
     private HealthSystem health;
     private ProjectileSpawner spawner;
     private ParrySystem parry;
+    private ClassAbility ability;
 
     private void Start()
     {
@@ -65,6 +66,33 @@ public class ClassManager : MonoBehaviour
         parry = GetComponent<ParrySystem>();
         if (parry != null)
             parry.Initialize(CombatData);
+
+        // Initialize class ability — remove any previous, then add by type name
+        if (ability != null)
+        {
+            Destroy(ability);
+            ability = null;
+        }
+
+        if (!string.IsNullOrEmpty(data.abilityClassName))
+        {
+            System.Type abilityType = null;
+            foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                abilityType = asm.GetType(data.abilityClassName);
+                if (abilityType != null) break;
+            }
+
+            if (abilityType != null && typeof(ClassAbility).IsAssignableFrom(abilityType))
+            {
+                ability = (ClassAbility)gameObject.AddComponent(abilityType);
+                Debug.Log($"ClassManager: Added ability '{data.abilityClassName}' to {gameObject.name}");
+            }
+            else
+            {
+                Debug.LogWarning($"ClassManager: Ability class '{data.abilityClassName}' not found or not a ClassAbility.", this);
+            }
+        }
     }
 
     /// <summary>
@@ -76,6 +104,7 @@ public class ClassManager : MonoBehaviour
         if (health != null) health.ResetForRound();
         if (spawner != null) spawner.ResetForRound();
         if (parry != null) parry.ResetForRound();
+        if (ability != null) ability.ResetCooldown();
     }
 
     /// <summary>

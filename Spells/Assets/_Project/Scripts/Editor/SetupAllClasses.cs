@@ -425,7 +425,8 @@ public class SetupAllClasses : Editor
     }
 
     private static void CreateClass(string className, string desc,
-        CombatData combat, GameObject projectile, string[] tags, Color color, ref int count)
+        CombatData combat, GameObject projectile, string[] tags, Color color, ref int count,
+        string abilityClassName = null)
     {
         string path = $"{DataRoot}/Classes/{className}.asset";
         if (AssetDatabase.LoadAssetAtPath<ClassData>(path) != null) return;
@@ -437,6 +438,7 @@ public class SetupAllClasses : Editor
         data.projectilePrefab = projectile;
         data.cardPoolTags = tags;
         data.classColor = color;
+        data.abilityClassName = abilityClassName ?? "";
 
         AssetDatabase.CreateAsset(data, path);
         Debug.Log($"[Spells] Created: {path}");

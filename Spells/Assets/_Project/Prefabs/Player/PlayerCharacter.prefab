@@ -311,7 +311,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5457be7e22f8340c89b17840439209cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Spells::ClassManager
-  classData: {fileID: 0}
+  classData: {fileID: 11400000, guid: 0af39cc922c55477c8518fc9a9cdf41e, type: 2}
 --- !u!114 &291442643838313215
 MonoBehaviour:
   m_ObjectHideFlags: 0

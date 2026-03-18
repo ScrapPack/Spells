@@ -13,6 +13,7 @@ public class TestInputProvider : MonoBehaviour, IInputProvider
     public bool CrouchHeld { get; set; }
     public bool DashPressed { get; set; }
     public bool DashHeld { get; set; }
+    public bool SpecialPressed { get; set; }
     public bool ShootPressed { get; set; }
     public bool ShootHeld { get; set; }
     public bool ParryPressed { get; set; }
@@ -20,6 +21,7 @@ public class TestInputProvider : MonoBehaviour, IInputProvider
 
     public void ConsumeJump() => JumpPressed = false;
     public void ConsumeDash() => DashPressed = false;
+    public void ConsumeSpecial() => SpecialPressed = false;
     public void ConsumeShoot() => ShootPressed = false;
     public void ConsumeParry() => ParryPressed = false;
 
@@ -68,6 +70,7 @@ public class TestInputProvider : MonoBehaviour, IInputProvider
         CrouchHeld = false;
         DashPressed = false;
         DashHeld = false;
+        SpecialPressed = false;
         ShootPressed = false;
         ShootHeld = false;
         ParryPressed = false;
