@@ -60,6 +60,7 @@ public class ProjectileSpawner : MonoBehaviour
     private CombatData combatData;
     private PlayerIdentity identity;
     private IInputProvider input;
+    private AimController aimController;
     private BoxCollider2D col;
     private float fireCooldownTimer;
 
@@ -81,9 +82,10 @@ public class ProjectileSpawner : MonoBehaviour
 
     private void Start()
     {
-        identity = GetComponent<PlayerIdentity>();
-        input    = GetComponent<IInputProvider>();
-        col      = GetComponent<BoxCollider2D>();
+        identity      = GetComponent<PlayerIdentity>();
+        input         = GetComponent<IInputProvider>();
+        aimController = GetComponent<AimController>();
+        col           = GetComponent<BoxCollider2D>();
 
         if (identity == null) Debug.LogError("ProjectileSpawner: No PlayerIdentity found!", this);
     }
@@ -128,23 +130,10 @@ public class ProjectileSpawner : MonoBehaviour
             return;
         }
 
-        // Aim direction: right stick (gamepad) or WASD/move input (keyboard).
-        // Mouse gives screen-space pixel coords (sqrMagnitude >> 100) — skip it and use move input.
-        Vector2 aimDir;
-        if (input.AimDirection.sqrMagnitude > 0.01f && input.AimDirection.sqrMagnitude <= 1.5f)
-            aimDir = input.AimDirection; // right stick
-        else
-            aimDir = input.MoveInput;    // WASD or left stick
-
-        if (aimDir.sqrMagnitude < 0.01f)
-        {
-            // No directional input — fire in the direction the player is facing
-            var controller = GetComponent<PlayerController>();
-            float facing = controller != null ? controller.FacingDirection : 1f;
-            aimDir = new Vector2(facing, 0f);
-        }
-
-        aimDir = aimDir.normalized;
+        // Use AimController for processed aim direction (handles mouse, stick, and fallback)
+        Vector2 aimDir = aimController != null
+            ? aimController.AimDirection
+            : Vector2.right;
 
         // Spawn position: use col.bounds (world-space AABB) so the center and extents
         // are correct even when the player is flipped via localScale.x = -1.

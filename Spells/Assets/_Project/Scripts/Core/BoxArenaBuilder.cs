@@ -734,6 +734,9 @@ public class BoxArenaBuilder : MonoBehaviour
         if (deathHandler)
             deathHandler.DeactivateOnDeath = false;
 
+        if (go.GetComponent<AimController>() == null)
+            go.AddComponent<AimController>();
+
         var classManager = go.GetComponent<ClassManager>();
         if (classManager != null && classData != null)
             classManager.Initialize(classData, playerIndex);

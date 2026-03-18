@@ -486,6 +486,9 @@ public class TestArenaBuilder : MonoBehaviour
                 sr.color = TestPlayerColors[index];
         }
 
+        if (playerInput.GetComponent<AimController>() == null)
+            playerInput.gameObject.AddComponent<AimController>();
+
         playerInput.GetComponent<PlayerIdentity>()?.Initialize(index);
 
         if (multiTargetCamera != null)
