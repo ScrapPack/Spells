@@ -1,127 +1,152 @@
 using UnityEngine;
 
 /// <summary>
-/// Wizard special ability: lobbed fireball.
-/// Spawns a large, arcing projectile that deals heavy damage.
-/// Uses the player's existing projectile prefab with overridden size,
-/// speed, gravity, and damage values for a distinct lobbed feel.
+/// Wizard special ability: arcane shield.
+/// Creates a blue shield around the player that grants invincibility and
+/// reflects enemy projectiles back at their owner.
 /// </summary>
 public class WizardFireball : ClassAbility
 {
-    [Header("Fireball Settings")]
-    [SerializeField] private float fireballSpeed = 12f;
-    [SerializeField] private float fireballDamage = 3f;
-    [SerializeField] private float fireballKnockback = 14f;
-    [SerializeField] private float fireballHitstun = 0.25f;
-    [SerializeField] private float fireballRadius = 0.4f;
-    [SerializeField] private float fireballGravity = 2f;
-    [SerializeField] private float fireballLifetime = 4f;
-    [SerializeField] private float fireballScale = 3f;
-    [SerializeField] private float lobAngle = 40f;
+    [Header("Shield Settings")]
+    [SerializeField] private float shieldDuration = 2f;
+    [SerializeField] private float shieldRadius = 1.5f;
+    [SerializeField] private float reflectSpeedMultiplier = 1.2f;
+    [SerializeField] private Color shieldColor = new Color(0.3f, 0.5f, 1f, 0.4f);
 
-    private ProjectileSpawner spawner;
-    private BoxCollider2D col;
+    private GameObject shieldVisual;
+    private float shieldTimer;
 
     protected override void Start()
     {
         base.Start();
-        abilityName = "Fireball";
-        cooldownDuration = 3f;
-
-        spawner = GetComponent<ProjectileSpawner>();
-        col = GetComponent<BoxCollider2D>();
+        abilityName = "Arcane Shield";
+        cooldownDuration = 8f;
     }
 
     protected override void Activate()
     {
-        if (Input == null || Rb == null || spawner == null) return;
+        if (Health == null) return;
 
-        GameObject prefab = GetProjectilePrefab();
-        if (prefab == null) return;
+        Health.GrantInvincibility(shieldDuration);
 
-        Vector2 aimDir = GetAimDirection();
+        if (shieldVisual != null)
+            Destroy(shieldVisual);
 
-        // Lob: launch at lobAngle above horizontal in the facing direction
-        float facing = Mathf.Sign(aimDir.x);
-        if (Mathf.Abs(facing) < 0.1f) facing = 1f;
-        float angleRad = lobAngle * Mathf.Deg2Rad;
-        aimDir = new Vector2(facing * Mathf.Cos(angleRad), Mathf.Sin(angleRad));
+        shieldVisual = CreateShieldVisual();
+        shieldTimer = shieldDuration;
+        IsActive = true;
+    }
 
-        // Spawn position: clear past the player's collider, accounting for scaled radius
-        Vector2 center = col != null ? (Vector2)col.bounds.center : (Vector2)transform.position;
-        Vector2 half = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
-        float scaledRadius = fireballRadius * fireballScale;
-        float clearance = Mathf.Abs(aimDir.x) * half.x
-                        + Mathf.Abs(aimDir.y) * half.y
-                        + scaledRadius + 0.3f;
-        Vector2 spawnPos = center + aimDir * clearance;
+    protected override void Tick()
+    {
+        shieldTimer -= Time.deltaTime;
 
-        GameObject projObj = Instantiate(prefab, spawnPos, Quaternion.identity);
-        Projectile proj = projObj.GetComponent<Projectile>();
-
-        if (proj != null)
+        if (shieldVisual != null)
         {
-            proj.CanHitOwner = false;
-            proj.Initialize(
-                Identity.PlayerID,
-                aimDir,
-                fireballSpeed,
-                fireballDamage,
-                fireballKnockback,
-                fireballHitstun,
-                fireballLifetime,
-                fireballRadius,
-                fireballGravity,
-                false,  // no bouncing
-                0,
-                false,  // no piercing
-                false   // not retrievable
-            );
+            shieldVisual.transform.position = transform.position;
 
-            // Override prefab defaults — Initialize uses bulletGravity/bulletBounces
-            // from SerializeField instead of the parameters we pass
-            var rb = projObj.GetComponent<Rigidbody2D>();
-            if (rb != null) rb.gravityScale = fireballGravity;
-            proj.DisableBouncing();
+            // Fade out in the last 0.5 seconds
+            if (shieldTimer < 0.5f)
+            {
+                var sr = shieldVisual.GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    float alpha = Mathf.Clamp01(shieldTimer / 0.5f) * shieldColor.a;
+                    sr.color = new Color(shieldColor.r, shieldColor.g, shieldColor.b, alpha);
+                }
+            }
         }
 
-        // Scale up the projectile visually
-        projObj.transform.localScale = Vector3.one * fireballScale;
-
-        // Apply projectile modifiers from cards
-        var modSystem = GetComponent<ProjectileModifierSystem>();
-        if (modSystem != null)
+        if (shieldTimer <= 0f)
         {
-            modSystem.ProcessProjectile(projObj);
+            if (shieldVisual != null)
+                Destroy(shieldVisual);
+            EndAbility();
         }
     }
 
-    private Vector2 GetAimDirection()
+    private GameObject CreateShieldVisual()
     {
-        // Right stick (gamepad) or move input (keyboard)
-        if (Input.AimDirection.sqrMagnitude > 0.01f && Input.AimDirection.sqrMagnitude <= 1.5f)
-            return Input.AimDirection.normalized;
+        var go = new GameObject("ArcaneShield");
+        go.transform.position = transform.position;
 
-        if (Input.MoveInput.sqrMagnitude > 0.01f)
-            return Input.MoveInput.normalized;
+        // Visual
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.color = shieldColor;
+        sr.sortingOrder = 10;
 
-        // Default to facing direction
-        var controller = GetComponent<PlayerController>();
-        float facing = controller != null ? controller.FacingDirection : 1f;
-        return new Vector2(facing, 0f);
+        int texSize = 128;
+        var tex = new Texture2D(texSize, texSize, TextureFormat.RGBA32, false);
+        float center = texSize / 2f;
+        float outerRadius = center;
+        float innerRadius = center - 8f;
+
+        for (int y = 0; y < texSize; y++)
+        {
+            for (int x = 0; x < texSize; x++)
+            {
+                float dist = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
+                if (dist <= outerRadius && dist >= innerRadius)
+                    tex.SetPixel(x, y, Color.white);
+                else if (dist < innerRadius)
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, 0.1f));
+                else
+                    tex.SetPixel(x, y, Color.clear);
+            }
+        }
+        tex.Apply();
+        tex.filterMode = FilterMode.Bilinear;
+
+        sr.sprite = Sprite.Create(tex, new Rect(0, 0, texSize, texSize),
+            new Vector2(0.5f, 0.5f), texSize / (shieldRadius * 2f));
+
+        // Trigger collider for reflecting projectiles
+        var col = go.AddComponent<CircleCollider2D>();
+        col.radius = shieldRadius;
+        col.isTrigger = true;
+
+        // Rigidbody required for trigger events
+        var rb = go.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Kinematic;
+
+        // Attach reflector component
+        var reflector = go.AddComponent<ShieldReflector>();
+        reflector.Initialize(Identity.PlayerID, reflectSpeedMultiplier);
+
+        return go;
     }
 
-    private GameObject GetProjectilePrefab()
+    private void OnDestroy()
     {
-        // Use the class's assigned projectile prefab via ClassManager
-        var classManager = GetComponent<ClassManager>();
-        if (classManager != null && classManager.CurrentClass != null
-            && classManager.CurrentClass.projectilePrefab != null)
-        {
-            return classManager.CurrentClass.projectilePrefab;
-        }
+        if (shieldVisual != null)
+            Destroy(shieldVisual);
+    }
+}
 
-        // Fallback: try ProjectileSpawner's prefab
-        return null;
+/// <summary>
+/// Attached to the shield visual. Reflects enemy projectiles on contact.
+/// </summary>
+public class ShieldReflector : MonoBehaviour
+{
+    private int ownerPlayerID;
+    private float speedMultiplier;
+
+    public void Initialize(int ownerID, float speedMult)
+    {
+        ownerPlayerID = ownerID;
+        speedMultiplier = speedMult;
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        var proj = other.GetComponent<Projectile>();
+        if (proj == null) return;
+
+        // Only reflect enemy projectiles
+        if (proj.OwnerPlayerID == ownerPlayerID) return;
+
+        // Reflect back away from shield center
+        Vector2 reflectDir = (other.transform.position - transform.position).normalized;
+        proj.Reflect(ownerPlayerID, reflectDir, speedMultiplier);
     }
 }
