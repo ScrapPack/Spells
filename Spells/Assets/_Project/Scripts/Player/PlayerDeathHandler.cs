@@ -28,6 +28,14 @@ public class PlayerDeathHandler : MonoBehaviour
 
     public bool IsDead { get; private set; }
 
+    /// <summary>Set by BoxArenaBuilder to keep the GameObject active through death so
+    /// PlayerInput doesn't lose its device pairing on SetActive cycles.</summary>
+    public bool DeactivateOnDeath
+    {
+        get => deactivateOnDeath;
+        set => deactivateOnDeath = value;
+    }
+
     private HealthSystem health;
     private PlayerStateMachine stateMachine;
     private Rigidbody2D rb;
@@ -56,10 +64,11 @@ public class PlayerDeathHandler : MonoBehaviour
         deathSequenceActive = true;
         deathTimer = deathDelay;
 
-        // Disable input immediately
-        var input = GetComponent<PlayerInputHandler>();
-        if (input != null)
-            input.enabled = false;
+        // Disable the state machine — stops Update/FixedUpdate so the dead player
+        // can't move. We leave PlayerInput enabled intentionally: toggling PlayerInput
+        // invalidates its InputUser and breaks SwitchCurrentControlScheme on respawn.
+        if (stateMachine != null)
+            stateMachine.enabled = false;
 
         // Stop movement
         if (rb != null)
@@ -137,10 +146,11 @@ public class PlayerDeathHandler : MonoBehaviour
                 col.enabled = true;
         }
 
-        // Re-enable input
-        var input = GetComponent<PlayerInputHandler>();
-        if (input != null)
-            input.enabled = true;
+        // Clear stale presses accumulated during death
+        GetComponent<PlayerInputHandler>()?.ClearInputState();
+
+        if (stateMachine != null)
+            stateMachine.enabled = true;
 
         OnRevived?.Invoke();
     }
@@ -163,9 +173,12 @@ public class PlayerDeathHandler : MonoBehaviour
                 col.enabled = true;
         }
 
-        var input = GetComponent<PlayerInputHandler>();
-        if (input != null)
-            input.enabled = true;
+        // Clear stale presses from before death so they don't trigger dashes/jumps
+        // on the first frame of the new life.
+        GetComponent<PlayerInputHandler>()?.ClearInputState();
+
+        if (stateMachine != null)
+            stateMachine.enabled = true;
     }
 
     private void OnDestroy()
