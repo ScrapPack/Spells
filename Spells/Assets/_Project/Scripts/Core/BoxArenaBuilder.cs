@@ -75,6 +75,7 @@ public class BoxArenaBuilder : MonoBehaviour
     // Players
     private GameObject[]   players;
     private HealthSystem[] playerHealth;
+    private RoundTimerUI   roundTimer;
 
     // Fight state
     private bool fightActive;
@@ -124,6 +125,8 @@ public class BoxArenaBuilder : MonoBehaviour
         var hud = gameObject.AddComponent<PlayerHUDOverlay>();
         hud.Initialize(players);
 
+        roundTimer = new GameObject("RoundTimer").AddComponent<RoundTimerUI>();
+
         StartCoroutine(BeginFirstFightNextFrame());
     }
 
@@ -148,6 +151,8 @@ public class BoxArenaBuilder : MonoBehaviour
         foreach (var p in players)
             SpellEffectRegistry.Instance?.NotifyRoundStart(p);
 
+        if (roundTimer != null) roundTimer.StartTimer();
+
         RespawnAndSubscribe();
     }
 
@@ -156,6 +161,8 @@ public class BoxArenaBuilder : MonoBehaviour
         roundWins[roundWinnerIndex]++;
         Debug.Log($"BoxArenaBuilder: Round {currentRound} won by P{roundWinnerIndex + 1}! " +
                   $"Game score — P1: {roundWins[0]}  P2: {roundWins[1]}");
+
+        if (roundTimer != null) roundTimer.StopTimer();
 
         foreach (var p in players)
             SpellEffectRegistry.Instance?.NotifyRoundEnd(p);
