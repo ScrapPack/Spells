@@ -94,7 +94,7 @@ The match loop lives **inline** inside the scene builder — there are no extern
 |------|------|
 | `PlayerController.cs` | Physics-based movement (move, jump, slide, wall-jump, wave-land, dash, corner correction). `FacingDirection`, `ApplyDash()`, `EndDash()`, `TryCornerCorrect()` |
 | `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal / Dash. Owns `DashesRemaining`, `WallStamina`, `LastWallDirection`, `StartFreezeFrame()` |
-| `IInputProvider.cs` | Interface — `MoveInput`, `JumpPressed`, `JumpHeld`, `DashPressed`, `ShootPressed`, `AimDirection`, `CrouchHeld` and their Consume methods |
+| `IInputProvider.cs` | Interface — `MoveInput`, `JumpPressed`, `JumpHeld`, `DashPressed`, `ShootPressed`, `SpecialPressed`, `AimDirection`, `CrouchHeld` and their Consume methods |
 | `PlayerInputHandler.cs` | Implements `IInputProvider` via Unity Input System Send Messages |
 | `ClassManager.cs` | Applies `ClassData` to player; initializes combat/movement; applies card modifiers |
 | `PlayerIdentity.cs` | Player ID + team |
@@ -116,7 +116,7 @@ Player states (`States/`): `GroundedState`, `AirborneState`, `WallSlidingState`,
 | `Projectile.cs` | Base projectile: movement, lifetime, bouncing, self-damage. SerializeField overrides: `lifetimeMultiplier` (default 5×), `bulletGravity` (default 0.15), `bulletBounces` (default 3) |
 | `ProjectileSpawner.cs` | Fires projectiles; ammo system (Warrior axes); cooldown |
 | `ProjectileTrail.cs` | Visual trail on projectiles |
-| `ClassAbility.cs` | Per-class special ability base |
+| `ClassAbility.cs` | Per-class special ability base. Activates on `SpecialPressed` input (Q / North face button). Cooldown system with green ready-flash (0.1s). Subclasses override `Activate()` and optionally `Tick()` |
 | `CombatEventRouter.cs` | Routes combat events between systems |
 | `SpawnProtection.cs` | Iframes on round start |
 | `MonsterEntity.cs` | PvE enemy |
@@ -146,7 +146,7 @@ Player states (`States/`): `GroundedState`, `AirborneState`, `WallSlidingState`,
 
 | Class | Purpose |
 |-------|---------|
-| `ClassData` | Class definition: CombatData ref, projectile prefab, card pool tags, color/icon |
+| `ClassData` | Class definition: CombatData ref, projectile prefab, `abilityClassName` (string resolved at runtime), card pool tags, color/icon |
 | `CombatData` | HP, projectile speed/damage/lifetime/radius/gravity/bounces, knockback, parry window, iframes |
 | `MovementData` | Speed, acceleration, turnaround accel, jump, gravity, wall slide/climb/stamina, wave-land, dash, corner correction, fast fall parameters |
 | `BiomeData` | Biome structure rules: bounds, platform count/height, walls, hazards, visuals |
@@ -245,7 +245,7 @@ Implemented via `Specs/CelesteMovement.md`. Key mechanics:
 | **Wall-jump refills dash** | `WallSlidingState` resets `DashesRemaining` on wall-jump |
 | **Wall coyote time** | `WallSlidingState` sets `CoyoteTimer` + `LastWallDirection` on detach. `AirborneState` checks `CoyoteTimer > 0 && LastWallDirection != 0` before ground coyote → `ApplyWallJump`, refills dash, sets lockout. `LastWallDirection` cleared on landing |
 
-> **Required Unity setup:** The Jump action must use `"Press(behavior=2)"` interaction (PressAndRelease) in the Input Action Asset so `JumpHeld` correctly reads false on release. The Dash action needs a **"Dash"** Button action mapped to `LeftShift` / South gamepad button.
+> **Required Unity setup:** The Jump action must use `"Press(behavior=2)"` interaction (PressAndRelease) in the Input Action Asset so `JumpHeld` correctly reads false on release. The Dash action needs a **"Dash"** Button action mapped to `LeftShift` / South gamepad button. The Special action needs a **"Special"** Button action mapped to `Q` (KeyboardWASD) / North gamepad button.
 
 ---
 
@@ -258,16 +258,21 @@ Builds the entire 2-player match scene at runtime — no scene hierarchy setup n
 - Four **kill zone** trigger strips outside the arena (`killZonePadding`, default 6 units). Anything entering a kill zone: players take 9999 damage (instant kill), projectiles are destroyed
 
 **Player spawning** uses `PlayerInput.Instantiate(prefab, playerIndex, controlScheme, -1, Keyboard.current)`:
-- P1: scheme `"KeyboardWASD"` — WASD move, Space jump, F shoot, LShift dash
+- P1: scheme `"KeyboardWASD"` — WASD move, Space jump, F shoot, LShift dash, Q special
 - P2: scheme `"KeyboardArrows"` — Arrow keys move, RShift jump, Enter shoot, LShift dash
-- Gamepad: left stick move, South jump, East shoot, South dash
+- Gamepad: left stick move, South jump, East shoot, South dash, North special
 
 **Round loop**: `StartRound()` → subscribes `HealthSystem.OnDeath` → `OnPlayerDied()` → `EndRoundAfterDelay()` → `EndRound()` → `AutoPickCardThenNextRound(loserIndex)` coroutine → `StartRound()`.
+
+**Runtime UI created in `Start()`:**
+- `PlayerHUDOverlay` — health bars and ammo display per player
+- `RoundTimerUI` — 60-second countdown, starts/stops with each round
 
 **Key rules:**
 - `PlayerDeathHandler.ResetForRound()` must be called on dead players before repositioning each round
 - `SpellEffectRegistry` is created as a standalone GameObject in `Start()` before any card is added
 - `InstantKillTrigger` (inner class) handles both player kills and projectile destruction in `OnTriggerEnter2D`
+- `ClassManager.Initialize()` resolves `abilityClassName` via assembly scan and adds the ability component at runtime
 
 ---
 
@@ -284,3 +289,52 @@ Projectiles are configured by `CombatData` at spawn time, with **prefab-level Se
 Spawn position is computed using `col.bounds` (world-space AABB — correct when player is flipped) projected onto the aim direction, plus `projectileRadius + 0.1f` clearance. `CanHitOwner = true` by default — friendly fire and self-damage are enabled.
 
 Bounce normals use `Physics2D.Distance` for accurate reflection off floors, walls, and ceilings.
+
+`Projectile.DisableBouncing()` — public method to zero out bounce state after `Initialize()`, overriding prefab defaults. Used by abilities that spawn projectiles without bouncing.
+
+---
+
+## Class Ability System
+
+Class abilities are activated via the **Special** input (Q key / North face button on gamepad). The system is data-driven: `ClassData.abilityClassName` stores a string (e.g. `"WizardFireball"`), and `ClassManager.Initialize()` resolves the type at runtime via assembly scan and calls `AddComponent`.
+
+**Base class:** `ClassAbility` (abstract MonoBehaviour)
+- `Update()` checks `SpecialPressed` → `TryActivate()` → `Activate()` (abstract)
+- Cooldown system with `CooldownRemaining`, `IsReady`, `CooldownProgress`
+- Green flash on player sprite when cooldown finishes (0.1s, configurable)
+- `Tick()` virtual — called every frame while `IsActive` (for channeled/sustained abilities)
+- `ResetCooldown()` called by `ClassManager.ResetForRound()`
+
+**Implemented abilities** (`Combat/Abilities/`):
+
+| Ability | Class | Description |
+|---------|-------|-------------|
+| `WizardFireball` (Arcane Shield) | Wizard | 2s invincibility shield + reflects enemy projectiles. Blue circle visual follows player, fades in last 0.5s. `ShieldReflector` component on shield GO handles reflection via `Projectile.Reflect()`. 8s cooldown |
+| `TeleportAbility` | Wizard (alt) | Short-range blink in aim direction. Raycast-limited, brief iframes. 4s cooldown |
+| `ShieldBashAbility` | Warrior | Close-range stun |
+
+**Adding a new ability:**
+1. Create a new class extending `ClassAbility` in `Scripts/Combat/Abilities/`
+2. Override `Activate()` (and optionally `Tick()`)
+3. Set `abilityClassName` on the class's `ClassData` asset (or update `PatchClassAbilities()` in `SetupMVPAssets.cs`)
+
+**Input bindings:**
+- P1: `Q` key (`KeyboardWASD` scheme)
+- Gamepad: `buttonNorth` (Y / Triangle)
+- P2 (`KeyboardArrows`): not yet bound
+
+---
+
+## UI Systems — `Scripts/UI/`
+
+| File | Role |
+|------|------|
+| `RoundTimerUI.cs` | 60-second countdown timer (configurable `matchDuration`). Displays `SS:mm` in red at top-center via `OnGUI`. `StartTimer()` / `StopTimer()` called by `BoxArenaBuilder` round loop. `TimeRemaining` property for other systems |
+| `PlayerHUDOverlay.cs` | Runtime Canvas (`ScreenSpaceOverlay`). Health bars and ammo counters per player. Positioned via `WorldToScreenPoint` in `LateUpdate()` |
+| `RoundAnnouncer.cs` | Large centered text for round start/end ("ROUND 1", "FIGHT!", player wins). `OnGUI` with fade-out |
+| `Scoreboard.cs` | Round win tracking display |
+| `DraftUI.cs` | Post-round card selection panel (TextMeshPro) |
+| `CharacterSelectUI.cs` | Character select screen |
+| `CombatHUD.cs` | Combat-time health/card display |
+| `KillFeed.cs` | Kill notifications |
+| `PostMatchSummary.cs` | End-of-match summary |
