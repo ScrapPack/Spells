@@ -112,8 +112,9 @@ public class ProjectileSpawner : MonoBehaviour
             }
         }
 
-        // Fire on shoot input
-        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo)
+        // Fire on shoot input (blocked while a class ability is active, e.g. shield)
+        var ability = GetComponent<ClassAbility>();
+        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo && (ability == null || !ability.IsActive))
         {
             Fire();
             input.ConsumeShoot();
