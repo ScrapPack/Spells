@@ -2,15 +2,16 @@ using UnityEngine;
 
 /// <summary>
 /// Wizard special ability: arcane shield.
-/// Creates a blue shield around the player that grants invincibility and
-/// reflects enemy projectiles back at their owner.
+/// Creates a blue shield around the player that grants invincibility.
+/// The shield is on the Wall layer so projectiles bounce off it like any wall,
+/// and it physically blocks other players.
 /// </summary>
 public class WizardFireball : ClassAbility
 {
     [Header("Shield Settings")]
     [SerializeField] private float shieldDuration = 2f;
     [SerializeField] private float shieldRadius = 1.5f;
-    [SerializeField] private float reflectSpeedMultiplier = 1.2f;
+    [SerializeField] private float shieldKnockback = 20f;
     [SerializeField] private Color shieldColor = new Color(0.3f, 0.5f, 1f, 0.4f);
 
     private GameObject shieldVisual;
@@ -35,6 +36,28 @@ public class WizardFireball : ClassAbility
         shieldVisual = CreateShieldVisual();
         shieldTimer = shieldDuration;
         IsActive = true;
+
+        KnockbackPlayersInRadius();
+    }
+
+    private void KnockbackPlayersInRadius()
+    {
+        int playerLayer = LayerMask.NameToLayer("Player");
+        var hits = Physics2D.OverlapCircleAll(transform.position, shieldRadius, 1 << playerLayer);
+        foreach (var hit in hits)
+        {
+            // Skip self
+            var id = hit.GetComponent<PlayerIdentity>();
+            if (id != null && id.PlayerID == Identity.PlayerID) continue;
+
+            var hitRb = hit.GetComponent<Rigidbody2D>();
+            if (hitRb == null) continue;
+
+            Vector2 dir = (hit.transform.position - transform.position).normalized;
+            // Default to right if standing directly on top
+            if (dir.sqrMagnitude < 0.01f) dir = Vector2.right;
+            hitRb.linearVelocity = dir * shieldKnockback;
+        }
     }
 
     protected override void Tick()
@@ -70,6 +93,9 @@ public class WizardFireball : ClassAbility
         var go = new GameObject("ArcaneShield");
         go.transform.position = transform.position;
 
+        // Wall layer so projectiles bounce off it using existing wall-bounce logic
+        go.layer = LayerMask.NameToLayer("Wall");
+
         // Visual
         var sr = go.AddComponent<SpriteRenderer>();
         sr.color = shieldColor;
@@ -100,18 +126,17 @@ public class WizardFireball : ClassAbility
         sr.sprite = Sprite.Create(tex, new Rect(0, 0, texSize, texSize),
             new Vector2(0.5f, 0.5f), texSize / (shieldRadius * 2f));
 
-        // Trigger collider for reflecting projectiles
+        // Non-trigger collider on Wall layer: blocks players and bounces projectiles
         var col = go.AddComponent<CircleCollider2D>();
         col.radius = shieldRadius;
-        col.isTrigger = true;
 
-        // Rigidbody required for trigger events
         var rb = go.AddComponent<Rigidbody2D>();
         rb.bodyType = RigidbodyType2D.Kinematic;
 
-        // Attach reflector component
-        var reflector = go.AddComponent<ShieldReflector>();
-        reflector.Initialize(Identity.PlayerID, reflectSpeedMultiplier);
+        // Let the shield owner move freely inside their own shield
+        var ownerCollider = GetComponent<Collider2D>();
+        if (ownerCollider != null)
+            Physics2D.IgnoreCollision(col, ownerCollider);
 
         return go;
     }
@@ -120,33 +145,5 @@ public class WizardFireball : ClassAbility
     {
         if (shieldVisual != null)
             Destroy(shieldVisual);
-    }
-}
-
-/// <summary>
-/// Attached to the shield visual. Reflects enemy projectiles on contact.
-/// </summary>
-public class ShieldReflector : MonoBehaviour
-{
-    private int ownerPlayerID;
-    private float speedMultiplier;
-
-    public void Initialize(int ownerID, float speedMult)
-    {
-        ownerPlayerID = ownerID;
-        speedMultiplier = speedMult;
-    }
-
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        var proj = other.GetComponent<Projectile>();
-        if (proj == null) return;
-
-        // Only reflect enemy projectiles
-        if (proj.OwnerPlayerID == ownerPlayerID) return;
-
-        // Reflect back away from shield center
-        Vector2 reflectDir = (other.transform.position - transform.position).normalized;
-        proj.Reflect(ownerPlayerID, reflectDir, speedMultiplier);
     }
 }
