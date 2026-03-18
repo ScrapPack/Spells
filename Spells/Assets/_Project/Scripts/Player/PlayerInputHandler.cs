@@ -52,6 +52,24 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
         ParryPressed = false;
     }
 
+    /// <summary>
+    /// Reset all input flags to their neutral/unpressed state.
+    /// Call after death/respawn so stale presses don't carry into the new life.
+    /// </summary>
+    public void ClearInputState()
+    {
+        MoveInput    = Vector2.zero;
+        JumpPressed  = false;
+        JumpHeld     = false;
+        CrouchHeld   = false;
+        DashPressed  = false;
+        DashHeld     = false;
+        ShootPressed = false;
+        ShootHeld    = false;
+        ParryPressed = false;
+        AimDirection = Vector2.zero;
+    }
+
     // Called by PlayerInput via Send Messages when Move action value changes
     public void OnMove(InputValue value)
     {
