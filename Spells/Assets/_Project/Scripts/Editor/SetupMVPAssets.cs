@@ -16,6 +16,35 @@ public class SetupMVPAssets : EditorWindow
     private static readonly string DataRoot = "Assets/_Project/Data";
     private static readonly string PrefabRoot = "Assets/_Project/Prefabs";
 
+    [MenuItem("Spells/Patch Class Abilities", false, 104)]
+    public static void PatchClassAbilities()
+    {
+        int patched = 0;
+
+        // Map class names to their ability class names
+        var abilityMap = new System.Collections.Generic.Dictionary<string, string>
+        {
+            { "Wizard", "WizardFireball" },
+            { "Warrior", "ShieldBashAbility" },
+        };
+
+        foreach (var kvp in abilityMap)
+        {
+            string path = $"{DataRoot}/Classes/{kvp.Key}.asset";
+            var classData = AssetDatabase.LoadAssetAtPath<ClassData>(path);
+            if (classData != null && classData.abilityClassName != kvp.Value)
+            {
+                classData.abilityClassName = kvp.Value;
+                EditorUtility.SetDirty(classData);
+                Debug.Log($"[Spells] Patched {kvp.Key} ability → {kvp.Value}");
+                patched++;
+            }
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[Spells] Patched {patched} class abilities.");
+    }
+
     [MenuItem("Spells/Setup MVP Assets", false, 100)]
     public static void Setup()
     {
@@ -333,6 +362,7 @@ public class SetupMVPAssets : EditorWindow
         data.projectilePrefab = projectile;
         data.cardPoolTags = new string[] { "General", "Wizard" };
         data.classColor = new Color(0.5f, 0.3f, 1f, 1f); // Purple-blue
+        data.abilityClassName = "WizardFireball";
 
         AssetDatabase.CreateAsset(data, path);
         Debug.Log($"[Spells] Created: {path}");

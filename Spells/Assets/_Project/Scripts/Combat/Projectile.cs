@@ -39,6 +39,13 @@ public class Projectile : MonoBehaviour
     /// <summary>When true, projectile can damage its owner (returning axes).</summary>
     public bool CanHitOwner { get; set; }
 
+    /// <summary>Disable bouncing after Initialize (overrides prefab bulletBounces).</summary>
+    public void DisableBouncing()
+    {
+        bounces = false;
+        maxBounces = 0;
+    }
+
     /// <summary>Called just before dealing damage. Allows modifying DamageMultiplier.</summary>
     public System.Action<GameObject> OnBeforeHit;
 

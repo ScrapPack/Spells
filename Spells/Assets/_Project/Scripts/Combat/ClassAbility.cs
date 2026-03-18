@@ -57,6 +57,13 @@ public abstract class ClassAbility : MonoBehaviour
             }
         }
 
+        // Activate on special input
+        if (Input != null && Input.SpecialPressed)
+        {
+            TryActivate();
+            Input.ConsumeSpecial();
+        }
+
         // Tick active ability
         if (IsActive)
         {
