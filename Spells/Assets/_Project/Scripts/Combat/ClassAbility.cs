@@ -31,10 +31,19 @@ public abstract class ClassAbility : MonoBehaviour
     public bool IsActive { get; protected set; }
     public string AbilityName => abilityName;
 
+    [Header("Ready Flash")]
+    [SerializeField] private Color readyFlashColor = new Color(0.2f, 1f, 0.3f);
+    [SerializeField] private float readyFlashDuration = 0.1f;
+
     protected PlayerIdentity Identity { get; private set; }
     protected HealthSystem Health { get; private set; }
     protected Rigidbody2D Rb { get; private set; }
     protected IInputProvider Input { get; private set; }
+
+    private SpriteRenderer spriteRenderer;
+    private Color originalColor;
+    private float flashTimer;
+    private bool isFlashing;
 
     protected virtual void Start()
     {
@@ -42,6 +51,9 @@ public abstract class ClassAbility : MonoBehaviour
         Health = GetComponent<HealthSystem>();
         Rb = GetComponent<Rigidbody2D>();
         Input = GetComponent<IInputProvider>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+            originalColor = spriteRenderer.color;
     }
 
     protected virtual void Update()
@@ -54,6 +66,24 @@ public abstract class ClassAbility : MonoBehaviour
             {
                 CooldownRemaining = 0f;
                 OnAbilityReady?.Invoke();
+                StartReadyFlash();
+            }
+        }
+
+        // Tick ready flash
+        if (isFlashing)
+        {
+            flashTimer -= Time.deltaTime;
+            if (flashTimer <= 0f)
+            {
+                isFlashing = false;
+                if (spriteRenderer != null)
+                    spriteRenderer.color = originalColor;
+            }
+            else if (spriteRenderer != null)
+            {
+                float t = flashTimer / readyFlashDuration;
+                spriteRenderer.color = Color.Lerp(originalColor, readyFlashColor, t);
             }
         }
 
@@ -102,6 +132,14 @@ public abstract class ClassAbility : MonoBehaviour
     protected void EndAbility()
     {
         IsActive = false;
+    }
+
+    private void StartReadyFlash()
+    {
+        if (spriteRenderer == null) return;
+        isFlashing = true;
+        flashTimer = readyFlashDuration;
+        spriteRenderer.color = readyFlashColor;
     }
 
     /// <summary>
