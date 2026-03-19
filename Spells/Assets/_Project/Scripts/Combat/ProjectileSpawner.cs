@@ -66,6 +66,7 @@ public class ProjectileSpawner : MonoBehaviour
     private AimController aimController;
     private BoxCollider2D col;
     private ParrySystem parrySystem;
+    private ClassAbility classAbility;
     private float fireCooldownTimer;
 
     // ── Initialization ────────────────────────────────────────────────────────
@@ -91,6 +92,7 @@ public class ProjectileSpawner : MonoBehaviour
         aimController = GetComponent<AimController>();
         col           = GetComponent<BoxCollider2D>();
         parrySystem   = GetComponent<ParrySystem>();
+        classAbility  = GetComponent<ClassAbility>();
 
         if (identity == null) Debug.LogError("ProjectileSpawner: No PlayerIdentity found!", this);
     }
@@ -117,13 +119,15 @@ public class ProjectileSpawner : MonoBehaviour
             }
         }
 
-        // Fire on shoot input (blocked while a class ability is active, e.g. shield, or charge shot)
-        var ability = GetComponent<ClassAbility>();
-        bool parryLocked = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
+
+        // Fire on shoot input — always consume so empty-mag clicks don't buffer.
+        // Blocked while parrying, ability active (e.g. shield), or charge shot effect present.
+        bool parryLocked   = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
+        bool abilityLocked = classAbility != null && classAbility.IsActive;
         bool hasChargeShot = GetComponent<ChargeShotEffect>() != null;
-        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo && !IsChargingShot && !hasChargeShot && (ability == null || !ability.IsActive))
+        if (input.ShootPressed)
         {
-            if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked)
+            if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked && !abilityLocked && !IsChargingShot && !hasChargeShot)
                 Fire();
             input.ConsumeShoot();
         }

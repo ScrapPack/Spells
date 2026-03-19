@@ -78,15 +78,19 @@ public class GroundedState : IPlayerState
         }
 
         // Dash (Celeste)
-        if (ctx.Input.DashPressed && ctx.DashesRemaining > 0)
+        if (ctx.Input.DashPressed && ctx.DashesRemaining > 0 && !ctx.IsAbilityActive)
         {
             ctx.ChangeState(ctx.DashState);
             return;
         }
 
-        // Jump — wave-jump preserves slide momentum, normal jump doesn't.
+        if (ctx.Input.DashPressed && ctx.IsAbilityActive)
+            ctx.Input.ConsumeDash();
+
+        // Jump — blocked while a class ability is active (e.g. shield).
+        // Wave-jump preserves slide momentum, normal jump doesn't.
         // Corner correction nudges the player past tight ceiling corners.
-        if (ctx.Input.JumpPressed)
+        if (ctx.Input.JumpPressed && !ctx.IsAbilityActive)
         {
             ctx.Input.ConsumeJump();
             if (ctx.Controller.IsSliding)
@@ -103,6 +107,10 @@ public class GroundedState : IPlayerState
             ctx.ChangeState(ctx.AirborneState);
             return;
         }
+
+        // Consume blocked jump so it doesn't carry into the next frame
+        if (ctx.Input.JumpPressed && ctx.IsAbilityActive)
+            ctx.Input.ConsumeJump();
 
         // Fell off edge — transition to airborne with coyote time
         if (!ctx.Physics.IsGrounded)

@@ -31,15 +31,19 @@ public class AirborneState : IPlayerState
             jumpCut = true;
         }
 
-        // Dash — check before jump so dash-into-jump works via DashState
-        if (ctx.Input.DashPressed && ctx.DashesRemaining > 0)
+        // Dash — check before jump so dash-into-jump works via DashState.
+        // Blocked while ability is active (e.g. shield).
+        if (ctx.Input.DashPressed && ctx.DashesRemaining > 0 && !ctx.IsAbilityActive)
         {
             ctx.ChangeState(ctx.DashState);
             return;
         }
 
-        // Coyote time jump
-        if (ctx.Input.JumpPressed && ctx.CoyoteTimer > 0f)
+        if (ctx.Input.DashPressed && ctx.IsAbilityActive)
+            ctx.Input.ConsumeDash();
+
+        // Coyote time jump — blocked while ability is active
+        if (ctx.Input.JumpPressed && ctx.CoyoteTimer > 0f && !ctx.IsAbilityActive)
         {
             ctx.Input.ConsumeJump();
             ctx.CoyoteTimer = 0f;
@@ -48,8 +52,8 @@ public class AirborneState : IPlayerState
             return;
         }
 
-        // Air jump (for power cards like "Second Wind")
-        if (ctx.Input.JumpPressed && airJumpsUsed < ctx.Controller.Data.maxAirJumps)
+        // Air jump (for power cards like "Second Wind") — blocked while ability is active
+        if (ctx.Input.JumpPressed && airJumpsUsed < ctx.Controller.Data.maxAirJumps && !ctx.IsAbilityActive)
         {
             ctx.Input.ConsumeJump();
             airJumpsUsed++;
@@ -60,9 +64,7 @@ public class AirborneState : IPlayerState
 
         // Consume jump press if nothing used it (prevent it carrying over)
         if (ctx.Input.JumpPressed)
-        {
             ctx.Input.ConsumeJump();
-        }
 
         // Landed
         if (ctx.Physics.IsGrounded && ctx.Controller.Rb.linearVelocity.y <= 0.1f)
