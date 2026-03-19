@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Rewired;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -131,6 +132,303 @@ public class BoxArenaBuilder : MonoBehaviour
         roundTimer = new GameObject("RoundTimer").AddComponent<RoundTimerUI>();
 
         StartCoroutine(BeginFirstFightNextFrame());
+    }
+
+    // =========================================================
+    // Debug Card Shop (Select button / G key to open)
+    // =========================================================
+
+    private GameObject debugShopCanvas;
+    private int debugShopPlayerIndex;
+    private int debugShopSelection;
+    private PowerCardData[] debugShopCards;
+    private GameObject[] debugShopCardGOs;
+    private Text debugShopPlayerLabel;
+    private float debugNavCooldown;
+
+    private void Update()
+    {
+        // Open: G key or Rewired system player Start/Menu button
+        bool selectPressed = UnityEngine.Input.GetKeyDown(KeyCode.G);
+
+        // Check all Rewired players for a Start button press
+        for (int i = 0; i < ReInput.players.playerCount && !selectPressed; i++)
+        {
+            var p = ReInput.players.GetPlayer(i);
+            if (p != null)
+            {
+                // Check common "start/select/menu" buttons by element ID
+                foreach (var j in p.controllers.Joysticks)
+                {
+                    // Button 6 = Back/Select, Button 7 = Start on most gamepads
+                    if (j.GetButtonDown(6) || j.GetButtonDown(7))
+                    {
+                        selectPressed = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (selectPressed && players != null && debugShopCanvas == null)
+        {
+            debugShopPlayerIndex = 0;
+            OpenDebugShop();
+        }
+        else if (debugShopCanvas != null)
+        {
+            UpdateDebugShopInput();
+        }
+    }
+
+    private void OpenDebugShop()
+    {
+        var loaded = new System.Collections.Generic.List<PowerCardData>(
+            Resources.LoadAll<PowerCardData>("Cards"));
+        EnsureRuntimeCards(loaded);
+        debugShopCards = loaded.ToArray();
+        if (debugShopCards.Length == 0) return;
+
+        debugShopSelection = 0;
+        debugNavCooldown = 0f;
+
+        // ---- Canvas ----
+        debugShopCanvas = new GameObject("DebugCardShop");
+        var canvas = debugShopCanvas.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+        var scaler = debugShopCanvas.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+
+        // ---- Dim overlay ----
+        var overlay = new GameObject("Overlay");
+        overlay.transform.SetParent(debugShopCanvas.transform, false);
+        var overlayImg = overlay.AddComponent<Image>();
+        overlayImg.color = new Color(0f, 0f, 0f, 0.85f);
+        var overlayRect = overlay.GetComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.offsetMin = Vector2.zero;
+        overlayRect.offsetMax = Vector2.zero;
+
+        // ---- Header ----
+        CreateLabel(overlay.transform, "DEBUG CARD SHOP",
+            new Vector2(0f, 260f), 36, Color.yellow);
+
+        string playerName = debugShopPlayerIndex == 0 ? "Player 1" : "Player 2";
+        var playerLabelGO = CreateLabel(overlay.transform,
+            $"Granting to: {playerName}  [Bumper/Tab to switch]",
+            new Vector2(0f, 210f), 20, PlayerColors[debugShopPlayerIndex]);
+        debugShopPlayerLabel = playerLabelGO.GetComponentInChildren<Text>();
+
+        // ---- Instructions ----
+        CreateLabel(overlay.transform,
+            "D-Pad/Stick: Navigate  |  A/Jump: Grant  |  Select/G: Close",
+            new Vector2(0f, 175f), 16, Color.gray);
+
+        // ---- Card grid ----
+        float cardW = 220f;
+        float cardH = 270f;
+        float spacing = 16f;
+        int cols = Mathf.Min(debugShopCards.Length, 5);
+        float totalW = cols * cardW + (cols - 1) * spacing;
+        float startX = -totalW / 2f + cardW / 2f;
+        float startY = 100f;
+
+        debugShopCardGOs = new GameObject[debugShopCards.Length];
+        for (int i = 0; i < debugShopCards.Length; i++)
+        {
+            var card = debugShopCards[i];
+            int row = i / cols;
+            int col = i % cols;
+            float xPos = startX + col * (cardW + spacing);
+            float yPos = startY - row * (cardH + spacing);
+
+            var go = CreateDebugCardVisual(overlay.transform, card,
+                new Vector2(xPos, yPos), new Vector2(cardW, cardH));
+            debugShopCardGOs[i] = go;
+        }
+
+        UpdateDebugShopHighlight();
+    }
+
+    private void UpdateDebugShopInput()
+    {
+        debugNavCooldown -= Time.unscaledDeltaTime;
+
+        // Use Rewired player 0 for navigation (the player operating the menu)
+        var rw = ReInput.players.GetPlayer(0);
+        float h = 0f, v = 0f;
+        bool confirmBtn = false;
+        bool startBtn = false;
+
+        if (rw != null)
+        {
+            h = rw.GetAxis("Move Horizontal");
+            v = rw.GetAxis("Move Vertical");
+            confirmBtn = rw.GetButtonDown("Jump");
+
+            // Check raw joystick buttons for start/select/bumpers
+            foreach (var j in rw.controllers.Joysticks)
+            {
+                if (j.GetButtonDown(6) || j.GetButtonDown(7)) startBtn = true;
+                if (j.GetButtonDown(4) || j.GetButtonDown(5))
+                {
+                    debugShopPlayerIndex = 1 - debugShopPlayerIndex;
+                    string pName = debugShopPlayerIndex == 0 ? "Player 1" : "Player 2";
+                    if (debugShopPlayerLabel != null)
+                    {
+                        debugShopPlayerLabel.text = $"Granting to: {pName}  [Bumper/Tab to switch]";
+                        debugShopPlayerLabel.color = PlayerColors[debugShopPlayerIndex];
+                    }
+                }
+            }
+        }
+
+        // Keyboard fallback
+        if (UnityEngine.Input.GetKeyDown(KeyCode.RightArrow)) h = 1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.LeftArrow)) h = -1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.UpArrow)) v = 1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow)) v = -1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.D)) h = 1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.A)) h = -1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.W)) v = 1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.S)) v = -1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.Space))
+            confirmBtn = true;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.Tab))
+        {
+            debugShopPlayerIndex = 1 - debugShopPlayerIndex;
+            string pName = debugShopPlayerIndex == 0 ? "Player 1" : "Player 2";
+            if (debugShopPlayerLabel != null)
+            {
+                debugShopPlayerLabel.text = $"Granting to: {pName}  [Bumper/Tab to switch]";
+                debugShopPlayerLabel.color = PlayerColors[debugShopPlayerIndex];
+            }
+        }
+
+        // Navigation
+        int cols = Mathf.Min(debugShopCards.Length, 5);
+        bool moved = false;
+
+        if (debugNavCooldown <= 0f)
+        {
+            if (h > 0.5f) { debugShopSelection++; moved = true; }
+            else if (h < -0.5f) { debugShopSelection--; moved = true; }
+            else if (v > 0.5f) { debugShopSelection -= cols; moved = true; }
+            else if (v < -0.5f) { debugShopSelection += cols; moved = true; }
+
+            if (moved)
+            {
+                debugShopSelection = Mathf.Clamp(debugShopSelection, 0, debugShopCards.Length - 1);
+                debugNavCooldown = 0.2f;
+                UpdateDebugShopHighlight();
+            }
+        }
+
+        if (Mathf.Abs(h) < 0.3f && Mathf.Abs(v) < 0.3f)
+            debugNavCooldown = 0f;
+
+        // Confirm selection
+        if (confirmBtn)
+        {
+            var card = debugShopCards[debugShopSelection];
+            var inv = players[debugShopPlayerIndex]?.GetComponent<CardInventory>();
+            if (inv != null)
+            {
+                inv.AddCard(card);
+                string pn = debugShopPlayerIndex == 0 ? "P1" : "P2";
+                Debug.Log($"[DEBUG] Granted '{card.cardName}' to {pn}");
+            }
+            CloseDebugShop();
+            return;
+        }
+
+        // Close
+        if (startBtn || UnityEngine.Input.GetKeyDown(KeyCode.Escape)
+                     || UnityEngine.Input.GetKeyDown(KeyCode.G))
+        {
+            CloseDebugShop();
+        }
+    }
+
+    private void UpdateDebugShopHighlight()
+    {
+        for (int i = 0; i < debugShopCardGOs.Length; i++)
+        {
+            if (debugShopCardGOs[i] == null) continue;
+            var img = debugShopCardGOs[i].GetComponent<Image>();
+            if (img == null) continue;
+
+            var card = debugShopCards[i];
+            if (i == debugShopSelection)
+            {
+                // Highlight selected card with bright border color
+                img.color = new Color(card.cardColor.r * 0.6f,
+                                      card.cardColor.g * 0.6f,
+                                      card.cardColor.b * 0.6f, 1f);
+            }
+            else
+            {
+                img.color = new Color(card.cardColor.r * 0.2f,
+                                      card.cardColor.g * 0.2f,
+                                      card.cardColor.b * 0.2f, 1f);
+            }
+        }
+    }
+
+    private void CloseDebugShop()
+    {
+        if (debugShopCanvas != null)
+            Destroy(debugShopCanvas);
+        debugShopCanvas = null;
+        debugShopCards = null;
+        debugShopCardGOs = null;
+    }
+
+    private GameObject CreateDebugCardVisual(Transform parent, PowerCardData card,
+                                              Vector2 anchoredPos, Vector2 size)
+    {
+        var go = new GameObject(card.cardName + "_Card");
+        go.transform.SetParent(parent, false);
+
+        var img = go.AddComponent<Image>();
+        img.color = new Color(card.cardColor.r * 0.2f,
+                              card.cardColor.g * 0.2f,
+                              card.cardColor.b * 0.2f, 1f);
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.sizeDelta = size;
+        rt.anchoredPosition = anchoredPos;
+
+        // Accent bar
+        var bar = new GameObject("AccentBar");
+        bar.transform.SetParent(go.transform, false);
+        var barImg = bar.AddComponent<Image>();
+        barImg.color = card.cardColor;
+        var barRt = bar.GetComponent<RectTransform>();
+        barRt.anchorMin = new Vector2(0f, 1f);
+        barRt.anchorMax = new Vector2(1f, 1f);
+        barRt.offsetMin = new Vector2(0f, -8f);
+        barRt.offsetMax = Vector2.zero;
+
+        // Card name
+        CreateCardLabel(go.transform, card.cardName,
+            new Vector2(0f, size.y * 0.33f), new Vector2(size.x - 16f, 50f),
+            20, FontStyle.Bold, Color.white);
+
+        // Positive
+        CreateCardLabel(go.transform, card.positiveDescription,
+            new Vector2(0f, 0f), new Vector2(size.x - 20f, size.y * 0.34f),
+            13, FontStyle.Normal, new Color(0.4f, 1f, 0.5f));
+
+        // Negative
+        CreateCardLabel(go.transform, card.negativeDescription,
+            new Vector2(0f, -size.y * 0.35f), new Vector2(size.x - 20f, size.y * 0.28f),
+            13, FontStyle.Normal, new Color(1f, 0.4f, 0.4f));
+
+        return go;
     }
 
     private IEnumerator BeginFirstFightNextFrame()
@@ -507,7 +805,7 @@ public class BoxArenaBuilder : MonoBehaviour
         });
     }
 
-    private static void CreateLabel(Transform parent, string text,
+    private static GameObject CreateLabel(Transform parent, string text,
                                     Vector2 anchoredPos, int fontSize, Color color)
     {
         var go   = new GameObject("Label");
@@ -523,6 +821,8 @@ public class BoxArenaBuilder : MonoBehaviour
         var rt = go.GetComponent<RectTransform>();
         rt.sizeDelta     = new Vector2(600f, 80f);
         rt.anchoredPosition = anchoredPos;
+
+        return go;
     }
 
     private static void CreateButton(Transform parent, string label,

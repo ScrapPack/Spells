@@ -30,13 +30,14 @@ Spells/                         # Repo root
             ├── Art/Sprites/
             ├── Data/           # ScriptableObject assets
             │   ├── Biomes/     # 5 biome theme assets
-            │   ├── Cards/      # PowerCardData assets
             │   ├── Classes/    # 8 ClassData assets
             │   ├── Combat/     # Per-class CombatData assets
             │   ├── Movement/   # SharedMovement asset
             │   └── Settings/   # DefaultGameSettings
             ├── Input/
             │   └── PlayerInputActions.inputactions
+            ├── Resources/
+            │   └── Cards/      # PowerCardData assets (loaded via Resources.LoadAll)
             ├── Prefabs/
             │   ├── Player/     # PlayerCharacter.prefab
             │   ├── Projectiles/# WizardBolt.prefab, WarriorAxe.prefab
@@ -95,7 +96,7 @@ The match loop lives **inline** inside the scene builder — there are no extern
 | `PlayerController.cs` | Physics-based movement (move, jump, slide, wall-jump, wave-land, dash, corner correction). `FacingDirection`, `ApplyDash()`, `EndDash()`, `TryCornerCorrect()` |
 | `PlayerStateMachine.cs` | Orchestrates states: Grounded / Airborne / WallSlide / Hitstun / SurfaceTraversal / Dash. Owns `DashesRemaining`, `WallStamina`, `LastWallDirection`, `StartFreezeFrame()` |
 | `IInputProvider.cs` | Interface — `MoveInput`, `JumpPressed`, `JumpHeld`, `DashPressed`, `ShootPressed`, `SpecialPressed`, `AimDirection`, `CrouchHeld` and their Consume methods |
-| `PlayerInputHandler.cs` | Implements `IInputProvider` via Unity Input System Send Messages |
+| `PlayerInputHandler.cs` | Implements `IInputProvider` via Rewired (`ReInput.players.GetPlayer(id)`) — polls axes and buttons each frame |
 | `ClassManager.cs` | Applies `ClassData` to player; initializes combat/movement; applies card modifiers |
 | `PlayerIdentity.cs` | Player ID + team |
 | `PlayerDeathHandler.cs` | Death events, feedback, `ResetForRound()` |
@@ -114,7 +115,7 @@ Player states (`States/`): `GroundedState`, `AirborneState`, `WallSlidingState`,
 | `ParrySystem.cs` | 6-8 frame timing window; reflects projectile; whiff recovery |
 | `ProjectileSpawner.cs` | Fires projectiles on Shoot input (F key / buttonEast). Direction = right stick or MoveInput (WASD). `CanHitOwner = true` — friendly fire enabled. Spawn point cleared past player's BoxCollider2D extents |
 | `Projectile.cs` | Base projectile: movement, lifetime, bouncing, self-damage. SerializeField overrides: `lifetimeMultiplier` (default 5×), `bulletGravity` (default 0.15), `bulletBounces` (default 3) |
-| `ProjectileSpawner.cs` | Fires projectiles; ammo system (Warrior axes); cooldown |
+| `ProjectileSpawner.cs` | Fires projectiles; ammo system (Warrior axes); cooldown. `IsChargingShot` flag blocks normal fire. `ConsumeAmmo(n)` / `StartRefillIfEmpty()` API for SpellEffects that handle firing themselves |
 | `ProjectileTrail.cs` | Visual trail on projectiles |
 | `ClassAbility.cs` | Per-class special ability base. Activates on `SpecialPressed` input (Q / North face button). Cooldown system with green ready-flash (0.1s). Subclasses override `Activate()` and optionally `Tick()` |
 | `CombatEventRouter.cs` | Routes combat events between systems |
@@ -140,7 +141,7 @@ Player states (`States/`): `GroundedState`, `AirborneState`, `WallSlidingState`,
 | `SpellEffectRegistry.cs` | Instantiates and manages `SpellEffect` lifecycle |
 
 **Implemented SpellEffects** (`Cards/Effects/`):
-`AmbushEffect`, `AncestralTotemEffect`, `BerserkerEffect`, `BloodPactEffect`, `DarkTetherEffect`, `GlassCannonEffect`, `HeavyThrowEffect`, `HexMarkEffect`, `JackpotEffect`, `LichFormEffect`, `LuckyBounceEffect`, `MagneticReturnEffect`, `SecondWindEffect`, `SmokeBombEffect`, `SoulSiphonEffect`, `SpiritBondEffect`, `StickyBrewEffect`, `VampiricEffect`, `VenomDartEffect`, `VolatileMixEffect`
+`AmbushEffect`, `AncestralTotemEffect`, `BerserkerEffect`, `BloodPactEffect`, `ChargeShotEffect`, `DarkTetherEffect`, `GlassCannonEffect`, `HeavyThrowEffect`, `HexMarkEffect`, `JackpotEffect`, `LichFormEffect`, `LuckyBounceEffect`, `MagneticReturnEffect`, `SecondWindEffect`, `SmokeBombEffect`, `SoulSiphonEffect`, `SpiritBondEffect`, `StickyBrewEffect`, `VampiricEffect`, `VenomDartEffect`, `VolatileMixEffect`
 
 ### Data ScriptableObjects — `Scripts/Data/`
 
@@ -218,11 +219,13 @@ Play-mode tests use `TestInputProvider` (implements `IInputProvider`) to drive t
 ## Key Conventions
 
 - ScriptableObject assets live in `_Project/Data/` mirroring their script folder structure.
+- **PowerCardData assets** live in `_Project/Resources/Cards/` so they can be loaded at runtime via `Resources.LoadAll<PowerCardData>("Cards")`.
 - Prefabs live in `_Project/Prefabs/` organized by type.
-- New SpellEffects: extend `SpellEffect`, register in `SpellEffectRegistry`, create a matching `PowerCardData` asset.
+- New SpellEffects: extend `SpellEffect`, register in `SpellEffectRegistry`, create a matching `PowerCardData` asset in `Resources/Cards/`. Also add a runtime fallback in `BoxArenaBuilder.EnsureRuntimeCards()`.
 - New classes: create `ClassData` + `CombatData` assets — no code changes needed unless adding a unique class ability.
 - All stat tuning (damage, speed, HP, parry window) is done in ScriptableObject assets, not in code.
 - Feature requirement specs live in `Specs/` at the repo root.
+- **SpellEffect caching caveat**: `SpellEffect.Initialize()` caches `Spawner`, `Class`, `Identity` etc. via `GetComponent` at card-pick time. If these refs are null (e.g., component not yet initialized), the subclass should lazily re-fetch via `GetComponent` in `Update()`.
 
 ---
 
@@ -245,7 +248,7 @@ Implemented via `Specs/CelesteMovement.md`. Key mechanics:
 | **Wall-jump refills dash** | `WallSlidingState` resets `DashesRemaining` on wall-jump |
 | **Wall coyote time** | `WallSlidingState` sets `CoyoteTimer` + `LastWallDirection` on detach. `AirborneState` checks `CoyoteTimer > 0 && LastWallDirection != 0` before ground coyote → `ApplyWallJump`, refills dash, sets lockout. `LastWallDirection` cleared on landing |
 
-> **Required Unity setup:** The Jump action must use `"Press(behavior=2)"` interaction (PressAndRelease) in the Input Action Asset so `JumpHeld` correctly reads false on release. The Dash action needs a **"Dash"** Button action mapped to `LeftShift` / South gamepad button. The Special action needs a **"Special"** Button action mapped to `Q` (KeyboardWASD) / North gamepad button.
+> **Required Unity setup:** Input is handled via **Rewired** (not Unity Input System). Action names must match those in the Rewired Input Manager asset: `"Move Horizontal"`, `"Move Vertical"`, `"Jump"`, `"Dash"`, `"Shoot"`, `"Parry"`, `"Special"`, `"Aim Horizontal"`, `"Aim Vertical"`. `PlayerInputHandler` polls `GetButton`/`GetButtonDown`/`GetAxis` each frame.
 
 ---
 
@@ -257,9 +260,13 @@ Builds the entire 2-player match scene at runtime — no scene hierarchy setup n
 - Floor (`Ground` layer), left/right walls (`Wall` layer, zero friction), ceiling
 - Four **kill zone** trigger strips outside the arena (`killZonePadding`, default 6 units). Anything entering a kill zone: players take 9999 damage (instant kill), projectiles are destroyed
 
-**Player spawning** uses `PlayerInput.Instantiate(prefab, playerIndex, controlScheme, -1, Keyboard.current)`:
-- P1: scheme `"KeyboardWASD"` — WASD move, Space jump, F shoot, LShift dash, Q special
-- P2: scheme `"KeyboardArrows"` — Arrow keys move, RShift jump, Enter shoot, LShift dash
+**Card pool auto-population**: `AutoPopulateCardPools()` runs in `Start()`. Loads all `PowerCardData` from `Resources/Cards/` via `Resources.LoadAll`. `EnsureRuntimeCards()` creates any missing card definitions (e.g. Charge Shot) at runtime so no editor batch step is required. If inspector card arrays are empty, both players get the full pool.
+
+**Debug Card Shop**: Press **Start/Select** on gamepad or **G** on keyboard to open a card grid overlay. Navigate with **stick/d-pad/WASD**, confirm with **Jump/A/Enter**, switch target player with **bumpers/Tab**, close with **Start/G/Escape**. Grants the selected card to the chosen player immediately.
+
+**Player spawning** uses Rewired for input. Players are instantiated with `Rewired.ReInput.players.GetPlayer(id)`:
+- Rewired action names: `"Move Horizontal"`, `"Move Vertical"`, `"Jump"`, `"Dash"`, `"Shoot"`, `"Parry"`, `"Special"`, `"Aim Horizontal"`, `"Aim Vertical"`
+- P1 (Rewired player 0), P2 (Rewired player 1) — mapped in Rewired Input Manager asset
 - Gamepad: left stick move, South jump, East shoot, South dash, North special
 
 **Round loop**: `StartRound()` → subscribes `HealthSystem.OnDeath` → `OnPlayerDied()` → `EndRoundAfterDelay()` → `EndRound()` → `AutoPickCardThenNextRound(loserIndex)` coroutine → `StartRound()`.
@@ -309,7 +316,7 @@ Class abilities are activated via the **Special** input (Q key / North face butt
 
 | Ability | Class | Description |
 |---------|-------|-------------|
-| `WizardFireball` (Arcane Shield) | Wizard | 2s invincibility shield + reflects enemy projectiles. Blue circle visual follows player, fades in last 0.5s. `ShieldReflector` component on shield GO handles reflection via `Projectile.Reflect()`. 8s cooldown |
+| `WizardFireball` (Arcane Shield) | Wizard | 2s invincibility shield. Shield GO is on `Wall` layer — projectiles bounce off it like walls. Non-trigger `CircleCollider2D` blocks players physically and knocks them back on cast. Blocks shooting while active. 8s cooldown |
 | `TeleportAbility` | Wizard (alt) | Short-range blink in aim direction. Raycast-limited, brief iframes. 4s cooldown |
 | `ShieldBashAbility` | Warrior | Close-range stun |
 

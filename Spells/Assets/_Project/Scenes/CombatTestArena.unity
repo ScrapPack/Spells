@@ -400,10 +400,12 @@ MonoBehaviour:
   player1ClassData: {fileID: 11400000, guid: 0af39cc922c55477c8518fc9a9cdf41e, type: 2}
   player1Cards:
   - {fileID: 11400000, guid: e01e06e1a77bd400a86d03dbe4d953f6, type: 2}
+  - {fileID: 11400000, guid: eb387d43062ff4968a517ff2467629af, type: 2}
   player2Prefab: {fileID: 7448692061287126237, guid: 70c2b3476b41f1d4f8c63cec54c0357f, type: 3}
   player2ClassData: {fileID: 11400000, guid: f4529c05da96445dbae4cdd589b299cd, type: 2}
   player2Cards:
   - {fileID: 11400000, guid: 60182561cc255406f96ebf89f58f1b6a, type: 2}
+  - {fileID: 11400000, guid: eb387d43062ff4968a517ff2467629af, type: 2}
   fightsToWinRound: 2
   roundsToWinGame: 5
   fightEndDelay: 2
@@ -440,7 +442,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5035558574686289212, guid: a6711fbf6f3d44ddca4a12dc2692557e, type: 3}
       propertyPath: _userData.configVars.unityUsePhysicalKeys
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6395246999085540868, guid: a6711fbf6f3d44ddca4a12dc2692557e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -855,7 +857,7 @@ MonoBehaviour:
   readyFlashDuration: 0.1
   shieldDuration: 2
   shieldRadius: 1.5
-  reflectSpeedMultiplier: 1.2
+  shieldKnockback: 20
   shieldColor: {r: 0.3, g: 0.5, b: 1, a: 0.4}
 --- !u!4 &2140001339
 Transform:

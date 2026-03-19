@@ -120,7 +120,8 @@ public class ProjectileSpawner : MonoBehaviour
         // Fire on shoot input (blocked while a class ability is active, e.g. shield, or charge shot)
         var ability = GetComponent<ClassAbility>();
         bool parryLocked = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
-        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo && !IsChargingShot && (ability == null || !ability.IsActive))
+        bool hasChargeShot = GetComponent<ChargeShotEffect>() != null;
+        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo && !IsChargingShot && !hasChargeShot && (ability == null || !ability.IsActive))
         {
             if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked)
                 Fire();

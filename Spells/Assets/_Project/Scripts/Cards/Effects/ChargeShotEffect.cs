@@ -1,137 +1,155 @@
+using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Charge Shot: Hold the shoot button to charge a powered shot.
-/// While holding, ammo is consumed at a set rate.
-/// Per ammo consumed: damage increases, projectile size increases.
-/// Reload doesn't start until the charged shot is fired.
+/// Charge Shot: Press and hold shoot to charge. Consumes 1 ammo immediately,
+/// then additional ammo over time while held. On release, fires a single shot
+/// scaled by total ammo consumed. Quick tap = 1 ammo = normal shot.
+/// Projectile tints toward red the more it's charged.
 /// </summary>
 public class ChargeShotEffect : SpellEffect
 {
-    [Header("Charge Settings")]
-    private float ammoConsumeInterval = 0.4f;  // seconds between each ammo consumed
-    private float damagePerAmmo = 0.5f;         // bonus damage per ammo consumed
-    private float sizePerAmmo = 0.08f;          // bonus radius per ammo consumed
+    private float ammoConsumeInterval = 0.7f;   // seconds between each extra ammo consumed
+    private float damagePerAmmo = 1f;            // bonus damage per extra ammo (beyond first)
+    private float sizePerAmmo = 0.4f;            // bonus radius per extra ammo — 5x at ~2 bonus ammo
 
-    private IInputProvider input;
-    private AimController aimController;
-    private BoxCollider2D col;
+    // Cached refs (fetched lazily since base class cache may be null)
+    private IInputProvider cachedInput;
+    private AimController cachedAim;
+    private BoxCollider2D cachedCol;
+    private ProjectileSpawner cachedSpawner;
+    private ClassManager cachedClass;
+    private PlayerIdentity cachedIdentity;
 
-    private bool isCharging;
-    private float chargeTimer;
+    private bool isHolding;
+    private float consumeTimer;
     private int ammoConsumed;
 
     protected override void OnApply()
     {
-        input = GetComponent<IInputProvider>();
-        aimController = GetComponent<AimController>();
-        col = GetComponent<BoxCollider2D>();
+        CacheRefs();
     }
 
     public override void OnRoundStart()
     {
-        isCharging = false;
-        chargeTimer = 0f;
+        isHolding = false;
+        consumeTimer = 0f;
         ammoConsumed = 0;
+    }
+
+    private void CacheRefs()
+    {
+        if (cachedInput == null) cachedInput = GetComponent<IInputProvider>();
+        if (cachedAim == null) cachedAim = GetComponent<AimController>();
+        if (cachedCol == null) cachedCol = GetComponent<BoxCollider2D>();
+        if (cachedSpawner == null) cachedSpawner = GetComponent<ProjectileSpawner>();
+        if (cachedClass == null) cachedClass = GetComponent<ClassManager>();
+        if (cachedIdentity == null) cachedIdentity = GetComponent<PlayerIdentity>();
     }
 
     private void Update()
     {
-        if (Spawner == null || input == null) return;
-        if (Class == null || Class.CombatData == null) return;
+        CacheRefs();
 
-        // Check if ability is active (e.g. shield) — block charging too
+        if (cachedSpawner == null || cachedInput == null) return;
+        if (cachedClass == null || cachedClass.CombatData == null) return;
+
         var ability = GetComponent<ClassAbility>();
         if (ability != null && ability.IsActive) return;
 
-        if (input.ShootHeld)
+        if (cachedInput.ShootHeld)
         {
-            if (!isCharging && Spawner.HasAmmo)
+            if (!isHolding && cachedSpawner.HasAmmo)
             {
-                // Start charging
-                isCharging = true;
-                Spawner.IsChargingShot = true;
-                chargeTimer = 0f;
+                isHolding = true;
+                cachedSpawner.IsChargingShot = true;  // Block refill + normal fire
+                consumeTimer = 0f;
                 ammoConsumed = 0;
-
-                // Consume the first ammo immediately (the base shot)
                 ConsumeOneAmmo();
             }
 
-            if (isCharging && Spawner.HasAmmo)
+            if (isHolding && cachedSpawner.HasAmmo)
             {
-                // Consume additional ammo over time
-                chargeTimer += Time.deltaTime;
-                if (chargeTimer >= ammoConsumeInterval)
+                consumeTimer += Time.deltaTime;
+                if (consumeTimer >= ammoConsumeInterval)
                 {
-                    chargeTimer -= ammoConsumeInterval;
+                    consumeTimer -= ammoConsumeInterval;
                     ConsumeOneAmmo();
                 }
             }
         }
-        else if (isCharging)
+        else if (isHolding)
         {
-            // Released — fire the charged shot
-            FireChargedShot();
-            isCharging = false;
-            Spawner.IsChargingShot = false;
-            chargeTimer = 0f;
+            Debug.Log($"[ChargeShot] Release — ammoConsumed={ammoConsumed}, identity={cachedIdentity != null}, class={cachedClass != null}, combatData={cachedClass?.CombatData != null}, prefab={cachedClass?.CurrentClass?.projectilePrefab != null}");
+            FireShot();
+
+            // Now allow refill to start
+            cachedSpawner.IsChargingShot = false;
+            cachedSpawner.StartRefillIfEmpty();
+
+            isHolding = false;
+            consumeTimer = 0f;
             ammoConsumed = 0;
         }
     }
 
     private void ConsumeOneAmmo()
     {
-        if (!Spawner.HasAmmo) return;
-        Spawner.ConsumeAmmo(1);
+        if (!cachedSpawner.HasAmmo) return;
+        cachedSpawner.ConsumeAmmo(1);
         ammoConsumed++;
     }
 
-    private void FireChargedShot()
+    private void FireShot()
     {
-        if (ammoConsumed <= 0) return;
+        if (ammoConsumed <= 0)
+        {
+            Debug.Log("[ChargeShot] FireShot skipped — ammoConsumed is 0");
+            return;
+        }
 
-        var combatData = Class.CombatData;
-        var prefab = Class.CurrentClass != null ? Class.CurrentClass.projectilePrefab : null;
-        if (prefab == null || combatData == null) return;
+        var combatData = cachedClass.CombatData;
+        var prefab = cachedClass.CurrentClass != null ? cachedClass.CurrentClass.projectilePrefab : null;
+        if (prefab == null || combatData == null)
+        {
+            Debug.Log($"[ChargeShot] FireShot skipped — prefab={prefab != null}, combatData={combatData != null}");
+            return;
+        }
+        Debug.Log($"[ChargeShot] Spawning projectile — damage={combatData.projectileDamage + (damagePerAmmo * (ammoConsumed - 1))}, radius={combatData.projectileRadius + (sizePerAmmo * (ammoConsumed - 1))}");
 
-        // Aim direction
-        Vector2 aimDir = aimController != null
-            ? aimController.AimDirection
+        Vector2 aimDir = cachedAim != null
+            ? cachedAim.AimDirection
             : Vector2.right;
 
-        // Extra ammo beyond the base shot
-        int bonusAmmo = ammoConsumed - 1;
+        // Scale by total ammo consumed (1 = base shot, 2+ = charged)
+        float finalDamage = combatData.projectileDamage * ammoConsumed;
+        float baseRadius = combatData.projectileRadius;
+        float scaleMultiplier = 1f + (sizePerAmmo * (ammoConsumed - 1));
 
-        // Scale stats by ammo consumed
-        float finalDamage = combatData.projectileDamage + (damagePerAmmo * bonusAmmo);
-        float finalRadius = combatData.projectileRadius + (sizePerAmmo * bonusAmmo);
-
-        // Spawn position (same logic as ProjectileSpawner)
-        Vector2 center = col != null ? (Vector2)col.bounds.center : (Vector2)transform.position;
-        Vector2 half = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
+        // Spawn position — clearance based on scaled size
+        float scaledRadius = baseRadius * scaleMultiplier;
+        Vector2 center = cachedCol != null ? (Vector2)cachedCol.bounds.center : (Vector2)transform.position;
+        Vector2 half = cachedCol != null ? (Vector2)cachedCol.bounds.extents : new Vector2(0.4f, 0.5f);
         float clearance = Mathf.Abs(aimDir.x) * half.x
                         + Mathf.Abs(aimDir.y) * half.y
-                        + finalRadius + 0.1f;
+                        + scaledRadius + 0.3f;
         Vector2 spawnPos = center + aimDir * clearance;
 
-        // Create projectile
         GameObject projObj = Instantiate(prefab, spawnPos, Quaternion.identity);
         Projectile proj = projObj.GetComponent<Projectile>();
 
         if (proj != null)
         {
-            var identity = Identity;
-            proj.CanHitOwner = true;
+            proj.CanHitOwner = false;  // Temporarily disable — re-enabled after clearing player
             proj.Initialize(
-                identity.PlayerID,
+                cachedIdentity.PlayerID,
                 aimDir,
                 combatData.projectileSpeed,
                 finalDamage,
                 combatData.knockbackForce,
                 combatData.hitstunDuration,
                 combatData.projectileLifetime,
-                finalRadius,
+                baseRadius,             // Use base radius — localScale handles the rest
                 combatData.projectileGravity,
                 combatData.projectileBounces,
                 combatData.maxBounces,
@@ -139,36 +157,94 @@ public class ChargeShotEffect : SpellEffect
                 combatData.retrievableProjectiles
             );
 
-            // Scale the visual to match the larger radius
-            if (bonusAmmo > 0)
+            // Scale collider via transform
+            projObj.transform.localScale *= scaleMultiplier;
+
+            // Give the projectile a visible sprite body (prefab has no sprite assigned)
+            var sr = projObj.GetComponentInChildren<SpriteRenderer>();
+            if (sr != null && sr.sprite == null)
             {
-                float scaleMultiplier = finalRadius / combatData.projectileRadius;
-                projObj.transform.localScale *= scaleMultiplier;
+                sr.sprite = CreateCircleSprite();
+            }
+
+            // Scale the trail width to match charged size
+            var trail = projObj.GetComponent<TrailRenderer>();
+            if (trail == null) trail = projObj.GetComponentInChildren<TrailRenderer>();
+            if (trail != null)
+            {
+                trail.startWidth *= scaleMultiplier;
+                trail.endWidth *= scaleMultiplier;
+            }
+
+            // Tint toward red based on charge level
+            if (ammoConsumed > 1 && sr != null)
+            {
+                float chargeFraction = Mathf.Clamp01((ammoConsumed - 1) / 3f);
+                Color baseColor = sr.color;
+                Color redTint = new Color(1f, 0.2f, 0.1f, baseColor.a);
+                sr.color = Color.Lerp(baseColor, redTint, chargeFraction);
             }
         }
 
-        // Apply projectile modifiers (homing, explosive, etc.)
         var modSystem = GetComponent<ProjectileModifierSystem>();
         if (modSystem != null)
             modSystem.ProcessProjectile(projObj);
 
-        Spawner.LastFiredProjectile = projObj;
+        cachedSpawner.LastFiredProjectile = projObj;
 
-        // Now start the reload if out of ammo
-        Spawner.StartRefillIfEmpty();
-
-        // Analytics
         var analytics = Object.FindAnyObjectByType<CombatAnalytics>();
-        if (analytics != null && Identity != null)
-            analytics.RecordProjectileFired(Identity.PlayerID);
+        if (analytics != null && cachedIdentity != null)
+            analytics.RecordProjectileFired(cachedIdentity.PlayerID);
 
-        Spawner.OnProjectileFired?.Invoke();
+        cachedSpawner.OnProjectileFired?.Invoke();
+
+        // Re-enable self-damage after the projectile clears the player
+        StartCoroutine(EnableOwnerHitAfterDelay(proj, 0.15f));
+    }
+
+    private IEnumerator EnableOwnerHitAfterDelay(Projectile proj, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (proj != null)
+            proj.CanHitOwner = true;
+    }
+
+    /// <summary>
+    /// Creates a simple filled circle sprite at runtime for the projectile body.
+    /// </summary>
+    private static Sprite cachedCircleSprite;
+    private static Sprite CreateCircleSprite()
+    {
+        if (cachedCircleSprite != null) return cachedCircleSprite;
+
+        int size = 64;
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float center = size / 2f;
+        float radiusSq = center * center;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center + 0.5f;
+                float dy = y - center + 0.5f;
+                tex.SetPixel(x, y, dx * dx + dy * dy <= radiusSq ? Color.white : Color.clear);
+            }
+        }
+
+        tex.Apply();
+        tex.filterMode = FilterMode.Bilinear;
+        cachedCircleSprite = Sprite.Create(tex,
+            new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f),
+            size);
+        return cachedCircleSprite;
     }
 
     public override void OnRemove()
     {
-        if (Spawner != null)
-            Spawner.IsChargingShot = false;
-        isCharging = false;
+        if (cachedSpawner != null)
+            cachedSpawner.IsChargingShot = false;
+        isHolding = false;
     }
 }
