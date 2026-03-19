@@ -55,10 +55,12 @@ public class PhysicsCheck : MonoBehaviour
             int ground = LayerMask.NameToLayer("Ground");
             int wall = LayerMask.NameToLayer("Wall");
             int platform = LayerMask.NameToLayer("Platform");
+            int player = LayerMask.NameToLayer("Player");
 
             if (ground >= 0) groundLayer |= (1 << ground);
             if (wall >= 0) groundLayer |= (1 << wall);
             if (platform >= 0) groundLayer |= (1 << platform);
+            if (player >= 0) groundLayer |= (1 << player);
 
             if (groundLayer == 0)
             {
