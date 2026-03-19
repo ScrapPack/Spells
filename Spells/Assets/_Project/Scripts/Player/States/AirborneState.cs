@@ -6,6 +6,7 @@ public class AirborneState : IPlayerState
     private int airJumpsUsed;
     private bool jumpCut;
     private bool isFastFalling;
+    private bool hasPassedPeak;     // true once the player has started falling after rising
 
     /// <summary>
     /// Previous frame's velocity — used as fallback for wave-land when
@@ -19,6 +20,7 @@ public class AirborneState : IPlayerState
         airJumpsUsed = 0;
         jumpCut = false;
         isFastFalling = false;
+        hasPassedPeak = false;
         PreviousVelocity = Vector2.zero;
     }
 
@@ -47,6 +49,7 @@ public class AirborneState : IPlayerState
         {
             ctx.Input.ConsumeJump();
             ctx.CoyoteTimer = 0f;
+            ctx.Physics.ClearGroundBuffer();
             ctx.Controller.ApplyJumpForce();
             jumpCut = false;
             return;
@@ -123,11 +126,14 @@ public class AirborneState : IPlayerState
             ctx.Controller.MoveHorizontal(input, ctx.Controller.Data.airAcceleration, ctx.Controller.Data.airDeceleration);
         }
 
-        // Fast fall: Celeste-style — holding down while falling.
-        // Instead of cranking gravity (which felt heavy and clunky), use normal
-        // fall gravity and accelerate toward fastFallMaxSpeed with MoveTowards.
-        // This gives a snappy, controlled fast-fall that's purely vertical.
-        isFastFalling = ctx.Input.CrouchHeld && ctx.Controller.Rb.linearVelocity.y <= 0f;
+        // Track whether the player has passed the jump peak (was rising, now falling)
+        if (!hasPassedPeak && ctx.Controller.Rb.linearVelocity.y <= 0f)
+            hasPassedPeak = true;
+
+        // Fast fall: Celeste-style — holding down after jump peak.
+        // Only available once the player has risen and started falling,
+        // not when walking off a ledge or during the rising phase.
+        isFastFalling = ctx.Input.CrouchHeld && hasPassedPeak;
         if (isFastFalling)
         {
             // Normal three-zone gravity system — no special gravity multiplier

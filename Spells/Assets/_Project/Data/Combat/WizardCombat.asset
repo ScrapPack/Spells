@@ -27,6 +27,6 @@ MonoBehaviour:
   parryWindow: 0.117
   parryWhiffRecovery: 0.3
   parryReflectSpeedMult: 1.2
-  invincibilityDuration: 0.5
+  invincibilityDuration: 0
   maxAmmo: 0
   retrievableProjectiles: 0

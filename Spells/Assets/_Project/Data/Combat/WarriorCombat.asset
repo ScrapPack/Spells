@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64ad1247a3ddb4e5dbad3f739c29aa21, type: 3}
   m_Name: WarriorCombat
   m_EditorClassIdentifier: Spells::CombatData
-  maxHP: 4
+  maxHP: 5
   projectileSpeed: 15
   fireCooldown: 0.6
   projectileDamage: 1
@@ -27,6 +27,6 @@ MonoBehaviour:
   parryWindow: 0.117
   parryWhiffRecovery: 0.3
   parryReflectSpeedMult: 1.2
-  invincibilityDuration: 0.5
+  invincibilityDuration: 0
   maxAmmo: 3
   retrievableProjectiles: 1
