@@ -67,6 +67,9 @@ public class SpellEffectRegistry : MonoBehaviour
 
         // Warlock Tier 2
         Register("dark_tether", typeof(DarkTetherEffect));
+
+        // General — Charge Shot
+        Register("charge_shot", typeof(ChargeShotEffect));
     }
 
     /// <summary>

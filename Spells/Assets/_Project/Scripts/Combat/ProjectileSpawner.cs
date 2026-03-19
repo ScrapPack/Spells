@@ -53,7 +53,10 @@ public class ProjectileSpawner : MonoBehaviour
     }
 
     /// <summary>Reference to the most recently fired projectile (for SpellEffects to modify).</summary>
-    public GameObject LastFiredProjectile { get; private set; }
+    public GameObject LastFiredProjectile { get; set; }
+
+    /// <summary>When true, normal firing is blocked (a SpellEffect is handling shooting).</summary>
+    public bool IsChargingShot { get; set; }
 
     // ── Private state ─────────────────────────────────────────────────────────
 
@@ -104,8 +107,8 @@ public class ProjectileSpawner : MonoBehaviour
         if (fireCooldownTimer > 0f)
             fireCooldownTimer -= Time.deltaTime;
 
-        // Auto-refill when depleted
-        if (CurrentAmmo <= 0)
+        // Auto-refill when depleted (blocked while charging)
+        if (CurrentAmmo <= 0 && !IsChargingShot)
         {
             RefillCountdown -= Time.deltaTime;
             if (RefillCountdown <= 0f)
@@ -118,12 +121,13 @@ public class ProjectileSpawner : MonoBehaviour
 
 
         // Fire on shoot input — always consume so empty-mag clicks don't buffer.
-        // Blocked while parrying (active window or recovery) or ability is active (e.g. shield).
+        // Blocked while parrying, ability active (e.g. shield), or charge shot effect present.
         bool parryLocked   = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
         bool abilityLocked = classAbility != null && classAbility.IsActive;
+        bool hasChargeShot = GetComponent<ChargeShotEffect>() != null;
         if (input.ShootPressed)
         {
-            if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked && !abilityLocked)
+            if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked && !abilityLocked && !IsChargingShot && !hasChargeShot)
                 Fire();
             input.ConsumeShoot();
         }
@@ -200,6 +204,24 @@ public class ProjectileSpawner : MonoBehaviour
     }
 
     // ── External API ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Consume ammo without firing (used by ChargeShotEffect while charging).
+    /// Does NOT start the refill timer — call StartRefillIfEmpty after firing.
+    /// </summary>
+    public void ConsumeAmmo(int amount)
+    {
+        CurrentAmmo = Mathf.Max(0, CurrentAmmo - amount);
+    }
+
+    /// <summary>
+    /// Start the refill timer if ammo is depleted. Called after a charge shot fires.
+    /// </summary>
+    public void StartRefillIfEmpty()
+    {
+        if (CurrentAmmo <= 0)
+            RefillCountdown = refillTime;
+    }
 
     /// <summary>
     /// Return ammo (e.g. Warrior picks up a landed axe). Cancels refill if now non-empty.
