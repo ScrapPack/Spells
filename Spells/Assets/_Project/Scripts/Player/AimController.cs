@@ -21,6 +21,8 @@ public class AimController : MonoBehaviour
     private BoxCollider2D    col;
     private LineRenderer     line;
     private Rewired.Player   rwPlayer;
+    private bool             usingStick;        // true while gamepad stick is active
+    private Vector2          lastMousePos;       // track mouse movement
 
     private void Start()
     {
@@ -62,30 +64,45 @@ public class AimController : MonoBehaviour
     private void UpdateAimDirection()
     {
         // 1. Gamepad right stick — comes through Rewired aim axes via IInputProvider
+        //    Dead zone: sqrMagnitude > 0.09 = magnitude > 0.3 (30%).
+        //    Prevents brief opposite-direction reads when flicking the stick hard.
         Vector2 raw = input?.AimDirection ?? Vector2.zero;
-        if (raw.sqrMagnitude > 0.01f)
+        if (raw.sqrMagnitude > 0.09f)
         {
             AimDirection = raw.normalized;
+            usingStick = true;
             return;
         }
 
-        // 2. Mouse aim — only for the Rewired player that has a mouse assigned.
-        //    Uses Input.mousePosition (Unity legacy) which is always available
-        //    regardless of which gameplay input backend is active.
+        // 2. Mouse aim — only switch from stick to mouse when the mouse actually moves.
+        //    Prevents aim snapping to mouse cursor when the stick enters dead zone.
         if (rwPlayer != null && rwPlayer.controllers.hasMouse)
         {
-            Camera cam = Camera.main;
-            if (cam != null)
+            Vector2 currentMousePos = (Vector2)Input.mousePosition;
+            bool mouseMoved = (currentMousePos - lastMousePos).sqrMagnitude > 4f;
+            lastMousePos = currentMousePos;
+
+            // Only use mouse if: we weren't using stick, or the mouse actually moved
+            if (!usingStick || mouseMoved)
             {
-                Vector3 worldPos = cam.ScreenToWorldPoint(
-                    new Vector3(Input.mousePosition.x, Input.mousePosition.y, 0f));
-                Vector2 dir = (Vector2)worldPos - (Vector2)transform.position;
-                if (dir.sqrMagnitude > 0.01f)
+                Camera cam = Camera.main;
+                if (cam != null)
                 {
-                    AimDirection = dir.normalized;
-                    return;
+                    Vector3 worldPos = cam.ScreenToWorldPoint(
+                        new Vector3(currentMousePos.x, currentMousePos.y, 0f));
+                    Vector2 dir = (Vector2)worldPos - (Vector2)transform.position;
+                    if (dir.sqrMagnitude > 0.01f)
+                    {
+                        AimDirection = dir.normalized;
+                        usingStick = false;
+                        return;
+                    }
                 }
             }
+
+            // Stick was active but now in dead zone — keep last aim direction
+            if (usingStick)
+                return;
         }
 
         // 3. Fallback: player facing direction

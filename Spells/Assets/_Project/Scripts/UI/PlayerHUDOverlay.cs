@@ -101,6 +101,7 @@ public class PlayerHUDOverlay : MonoBehaviour
         var fillGo = new GameObject("HP_Fill");
         fillGo.transform.SetParent(bgGo.transform, false);
         hud.healthBarFill            = fillGo.AddComponent<Image>();
+        hud.healthBarFill.sprite     = CreateWhiteSprite();
         hud.healthBarFill.color      = new Color(0.2f, 0.85f, 0.25f);
         hud.healthBarFill.type       = Image.Type.Filled;
         hud.healthBarFill.fillMethod = Image.FillMethod.Horizontal;
@@ -184,5 +185,18 @@ public class PlayerHUDOverlay : MonoBehaviour
                 }
             }
         }
+    }
+
+    private static Sprite whiteSprite;
+    private static Sprite CreateWhiteSprite()
+    {
+        if (whiteSprite != null) return whiteSprite;
+        var tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+        for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+                tex.SetPixel(x, y, Color.white);
+        tex.Apply();
+        whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
+        return whiteSprite;
     }
 }
