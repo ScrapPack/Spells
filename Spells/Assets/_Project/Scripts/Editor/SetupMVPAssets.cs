@@ -14,6 +14,7 @@ using System.IO;
 public class SetupMVPAssets : EditorWindow
 {
     private static readonly string DataRoot = "Assets/_Project/Data";
+    private static readonly string CardRoot = "Assets/_Project/Resources/Cards";
     private static readonly string PrefabRoot = "Assets/_Project/Prefabs";
 
     [MenuItem("Spells/Patch Class Abilities", false, 104)]
@@ -106,6 +107,7 @@ public class SetupMVPAssets : EditorWindow
         CreateCard_SpellShield();
         CreateCard_HeavyThrow();
         CreateCard_MagneticReturn();
+        CreateCard_ChargeShot();
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -121,7 +123,8 @@ public class SetupMVPAssets : EditorWindow
         EnsureFolder($"{DataRoot}/Combat");
         EnsureFolder($"{DataRoot}/Movement");
         EnsureFolder($"{DataRoot}/Classes");
-        EnsureFolder($"{DataRoot}/Cards");
+        EnsureFolder("Assets/_Project/Resources");
+        EnsureFolder(CardRoot);
         EnsureFolder($"{DataRoot}/Settings");
         EnsureFolder($"{PrefabRoot}/Projectiles");
     }
@@ -420,7 +423,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_StoneSkin()
     {
-        string path = $"{DataRoot}/Cards/StoneSkin.asset";
+        string path = $"{CardRoot}/StoneSkin.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -447,7 +450,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_Haste()
     {
-        string path = $"{DataRoot}/Cards/Haste.asset";
+        string path = $"{CardRoot}/Haste.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -474,7 +477,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_VampiricTouch()
     {
-        string path = $"{DataRoot}/Cards/VampiricTouch.asset";
+        string path = $"{CardRoot}/VampiricTouch.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -501,7 +504,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_GlassCannon()
     {
-        string path = $"{DataRoot}/Cards/GlassCannon.asset";
+        string path = $"{CardRoot}/GlassCannon.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -532,7 +535,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_ArcaneBarrage()
     {
-        string path = $"{DataRoot}/Cards/ArcaneBarrage.asset";
+        string path = $"{CardRoot}/ArcaneBarrage.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -560,7 +563,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_SpellShield()
     {
-        string path = $"{DataRoot}/Cards/SpellShield.asset";
+        string path = $"{CardRoot}/SpellShield.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -591,7 +594,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_HeavyThrow()
     {
-        string path = $"{DataRoot}/Cards/HeavyThrow.asset";
+        string path = $"{CardRoot}/HeavyThrow.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -621,7 +624,7 @@ public class SetupMVPAssets : EditorWindow
 
     private static void CreateCard_MagneticReturn()
     {
-        string path = $"{DataRoot}/Cards/MagneticReturn.asset";
+        string path = $"{CardRoot}/MagneticReturn.asset";
         if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
         { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
 
@@ -637,6 +640,29 @@ public class SetupMVPAssets : EditorWindow
         card.hasSpecialBehavior = true;
         card.specialBehaviorID = "magnetic_return";
         card.cardColor = new Color(0.5f, 0.5f, 0.8f, 1f); // Magnetic blue
+
+        AssetDatabase.CreateAsset(card, path);
+        Debug.Log($"[Spells] Created: {path}");
+    }
+
+    private static void CreateCard_ChargeShot()
+    {
+        string path = $"{CardRoot}/ChargeShot.asset";
+        if (AssetDatabase.LoadAssetAtPath<PowerCardData>(path) != null)
+        { Debug.Log($"[Spells] Skipped (exists): {path}"); return; }
+
+        var card = ScriptableObject.CreateInstance<PowerCardData>();
+        card.cardName = "Charge Shot";
+        card.positiveDescription = "✦ Hold shoot to charge — more ammo consumed = bigger, stronger shot";
+        card.negativeDescription = "✗ Can't rapid fire — must hold and release";
+        card.tier = 1;
+        card.classTags = new string[] { "General" };
+        card.positiveEffects = new StatModifier[0];
+        card.negativeEffects = new StatModifier[0];
+        card.stackCap = 1;
+        card.hasSpecialBehavior = true;
+        card.specialBehaviorID = "charge_shot";
+        card.cardColor = new Color(1f, 0.5f, 0f, 1f); // Orange
 
         AssetDatabase.CreateAsset(card, path);
         Debug.Log($"[Spells] Created: {path}");

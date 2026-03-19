@@ -53,7 +53,10 @@ public class ProjectileSpawner : MonoBehaviour
     }
 
     /// <summary>Reference to the most recently fired projectile (for SpellEffects to modify).</summary>
-    public GameObject LastFiredProjectile { get; private set; }
+    public GameObject LastFiredProjectile { get; set; }
+
+    /// <summary>When true, normal firing is blocked (a SpellEffect is handling shooting).</summary>
+    public bool IsChargingShot { get; set; }
 
     // ── Private state ─────────────────────────────────────────────────────────
 
@@ -102,8 +105,8 @@ public class ProjectileSpawner : MonoBehaviour
         if (fireCooldownTimer > 0f)
             fireCooldownTimer -= Time.deltaTime;
 
-        // Auto-refill when depleted
-        if (CurrentAmmo <= 0)
+        // Auto-refill when depleted (blocked while charging)
+        if (CurrentAmmo <= 0 && !IsChargingShot)
         {
             RefillCountdown -= Time.deltaTime;
             if (RefillCountdown <= 0f)
@@ -114,11 +117,10 @@ public class ProjectileSpawner : MonoBehaviour
             }
         }
 
-
-        // Fire on shoot input (blocked while a class ability is active, e.g. shield)
+        // Fire on shoot input (blocked while a class ability is active, e.g. shield, or charge shot)
         var ability = GetComponent<ClassAbility>();
         bool parryLocked = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
-        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo && (ability == null || !ability.IsActive))
+        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo && !IsChargingShot && (ability == null || !ability.IsActive))
         {
             if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked)
                 Fire();
@@ -197,6 +199,24 @@ public class ProjectileSpawner : MonoBehaviour
     }
 
     // ── External API ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Consume ammo without firing (used by ChargeShotEffect while charging).
+    /// Does NOT start the refill timer — call StartRefillIfEmpty after firing.
+    /// </summary>
+    public void ConsumeAmmo(int amount)
+    {
+        CurrentAmmo = Mathf.Max(0, CurrentAmmo - amount);
+    }
+
+    /// <summary>
+    /// Start the refill timer if ammo is depleted. Called after a charge shot fires.
+    /// </summary>
+    public void StartRefillIfEmpty()
+    {
+        if (CurrentAmmo <= 0)
+            RefillCountdown = refillTime;
+    }
 
     /// <summary>
     /// Return ammo (e.g. Warrior picks up a landed axe). Cancels refill if now non-empty.

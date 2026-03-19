@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -101,6 +103,9 @@ public class BoxArenaBuilder : MonoBehaviour
         multiCam    = SetupCamera();
 
         new GameObject("SpellEffectRegistry").AddComponent<SpellEffectRegistry>();
+
+        // Auto-populate card pools if not set in inspector
+        AutoPopulateCardPools();
 
         // UI clicks require an EventSystem. Create one if none exists.
         // StandaloneInputModule reads Unity's legacy Input.mousePosition so mouse
@@ -231,6 +236,53 @@ public class BoxArenaBuilder : MonoBehaviour
     {
         yield return new WaitForSeconds(seconds);
         action();
+    }
+
+    // =========================================================
+    // Card Pool
+    // =========================================================
+
+    /// <summary>
+    /// If card arrays are empty or missing, load all PowerCardData assets
+    /// from Resources/Cards so every card is available in the draft pool.
+    /// Also creates runtime-only card definitions for cards not yet baked as assets.
+    /// </summary>
+    private void AutoPopulateCardPools()
+    {
+        var loaded = new List<PowerCardData>(Resources.LoadAll<PowerCardData>("Cards"));
+        EnsureRuntimeCards(loaded);
+
+        var allCards = loaded.ToArray();
+        if (allCards.Length == 0) return;
+
+        if (player1Cards == null || player1Cards.Length == 0)
+            player1Cards = allCards;
+        if (player2Cards == null || player2Cards.Length == 0)
+            player2Cards = allCards;
+    }
+
+    /// <summary>
+    /// Creates any missing card definitions at runtime so they don't
+    /// require running an editor batch tool.
+    /// </summary>
+    private static void EnsureRuntimeCards(List<PowerCardData> cards)
+    {
+        if (!cards.Any(c => c.specialBehaviorID == "charge_shot"))
+        {
+            var card = ScriptableObject.CreateInstance<PowerCardData>();
+            card.cardName = "Charge Shot";
+            card.positiveDescription = "\u2726 Hold shoot to charge \u2014 more ammo = bigger, stronger shot";
+            card.negativeDescription = "\u2717 Can't rapid fire \u2014 must hold and release";
+            card.tier = 1;
+            card.classTags = new string[] { "General" };
+            card.positiveEffects = new StatModifier[0];
+            card.negativeEffects = new StatModifier[0];
+            card.stackCap = 1;
+            card.hasSpecialBehavior = true;
+            card.specialBehaviorID = "charge_shot";
+            card.cardColor = new Color(1f, 0.5f, 0f, 1f);
+            cards.Add(card);
+        }
     }
 
     // =========================================================
