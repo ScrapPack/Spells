@@ -15,6 +15,7 @@ public class RoundAnnouncer : MonoBehaviour
     private Color currentColor = Color.white;
     private float announceTimer;
     private GUIStyle style;
+    private GUIStyle shadowStyle;
 
     /// <summary>
     /// Show an announcement on screen.
@@ -64,10 +65,11 @@ public class RoundAnnouncer : MonoBehaviour
         {
             style = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 48,
+                fontSize  = 48,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
+            shadowStyle = new GUIStyle(style);
         }
 
         // Fade out in last portion
@@ -75,11 +77,9 @@ public class RoundAnnouncer : MonoBehaviour
             ? announceTimer / fadeOutDuration
             : 1f;
 
-        style.normal.textColor = new Color(currentColor.r, currentColor.g, currentColor.b, alpha);
-
-        // Drop shadow
-        Color shadowColor = new Color(0, 0, 0, alpha * 0.8f);
-        GUIStyle shadowStyle = new GUIStyle(style) { normal = { textColor = shadowColor } };
+        // Mutate the cached styles' colors — no allocation
+        style.normal.textColor      = new Color(currentColor.r, currentColor.g, currentColor.b, alpha);
+        shadowStyle.normal.textColor = new Color(0f, 0f, 0f, alpha * 0.8f);
 
         Rect center = new Rect(0, Screen.height * 0.3f, Screen.width, 60);
         Rect shadow = new Rect(2, Screen.height * 0.3f + 2, Screen.width, 60);

@@ -1,14 +1,10 @@
+using Rewired;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Processes raw aim input (right stick or mouse) into a normalized direction.
-/// Draws a red LineRenderer indicator showing the current aim direction.
-/// Other systems (ProjectileSpawner) read AimDirection instead of raw input.
-///
-/// Mouse aim reads Mouse.current directly rather than going through the Input System's
-/// per-player Aim action, because keyboard control schemes don't pair the Mouse device
-/// and the binding never fires.
+/// Processes raw aim input into a normalized direction and draws a LineRenderer indicator.
+/// Priority: gamepad right stick → mouse (if this Rewired player has a mouse) → facing direction.
+/// Other systems (ProjectileSpawner) read AimDirection from here instead of raw input.
 /// </summary>
 public class AimController : MonoBehaviour
 {
@@ -20,11 +16,11 @@ public class AimController : MonoBehaviour
     /// <summary>Processed aim direction (normalized). Never zero.</summary>
     public Vector2 AimDirection { get; private set; } = Vector2.right;
 
-    private IInputProvider input;
+    private IInputProvider   input;
     private PlayerController playerController;
-    private BoxCollider2D col;
-    private LineRenderer line;
-    private bool isKeyboardPlayer;
+    private BoxCollider2D    col;
+    private LineRenderer     line;
+    private Rewired.Player   rwPlayer;
 
     private void Start()
     {
@@ -32,8 +28,9 @@ public class AimController : MonoBehaviour
         playerController = GetComponent<PlayerController>();
         col              = GetComponent<BoxCollider2D>();
 
-        var playerInput  = GetComponent<PlayerInput>();
-        isKeyboardPlayer = playerInput != null && playerInput.currentControlScheme == "KeyboardWASD";
+        var identity = GetComponent<PlayerIdentity>();
+        int id = identity != null ? identity.PlayerID : 0;
+        rwPlayer = ReInput.players.GetPlayer(id);
 
         CreateLineRenderer();
     }
@@ -51,38 +48,37 @@ public class AimController : MonoBehaviour
         line.sortingLayerName = "Players";
         line.sortingOrder     = -1;
 
-        line.material = new Material(Shader.Find("Sprites/Default"));
+        line.material   = new Material(Shader.Find("Sprites/Default"));
         line.startColor = lineColor;
         line.endColor   = new Color(lineColor.r, lineColor.g, lineColor.b, 0f);
     }
 
     private void Update()
     {
-        if (input == null) return;
-
         UpdateAimDirection();
         UpdateIndicator();
     }
 
     private void UpdateAimDirection()
     {
-        // Gamepad right stick — comes through Input System (paired device)
-        Vector2 raw = input.AimDirection;
-        if (raw.sqrMagnitude > 0.01f && raw.sqrMagnitude <= 1.5f)
+        // 1. Gamepad right stick — comes through Rewired aim axes via IInputProvider
+        Vector2 raw = input?.AimDirection ?? Vector2.zero;
+        if (raw.sqrMagnitude > 0.01f)
         {
             AimDirection = raw.normalized;
             return;
         }
 
-        // Mouse aim — read Mouse.current directly because keyboard control schemes
-        // don't include Mouse in their device list, so the Aim action binding never fires.
-        if (isKeyboardPlayer && Mouse.current != null)
+        // 2. Mouse aim — only for the Rewired player that has a mouse assigned.
+        //    Uses Input.mousePosition (Unity legacy) which is always available
+        //    regardless of which gameplay input backend is active.
+        if (rwPlayer != null && rwPlayer.controllers.hasMouse)
         {
             Camera cam = Camera.main;
             if (cam != null)
             {
-                Vector2 mousePos = Mouse.current.position.ReadValue();
-                Vector3 worldPos = cam.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, 0f));
+                Vector3 worldPos = cam.ScreenToWorldPoint(
+                    new Vector3(Input.mousePosition.x, Input.mousePosition.y, 0f));
                 Vector2 dir = (Vector2)worldPos - (Vector2)transform.position;
                 if (dir.sqrMagnitude > 0.01f)
                 {
@@ -92,7 +88,7 @@ public class AimController : MonoBehaviour
             }
         }
 
-        // Fallback: facing direction
+        // 3. Fallback: player facing direction
         if (playerController != null)
             AimDirection = new Vector2(playerController.FacingDirection, 0f);
     }
@@ -101,16 +97,14 @@ public class AimController : MonoBehaviour
     {
         if (line == null) return;
 
-        // Start the line at the outer edge of the player's collider
-        // so the player body covers the line behind them.
         Vector2 center = col != null
             ? (Vector2)col.bounds.center
             : (Vector2)transform.position;
 
+        // Project AimDirection onto collider half-extents to find the edge distance
         float offset = 0f;
         if (col != null)
         {
-            // Project aim direction onto collider half-extents to find edge distance
             Vector2 halfExt = col.bounds.extents;
             float ax = Mathf.Abs(AimDirection.x);
             float ay = Mathf.Abs(AimDirection.y);

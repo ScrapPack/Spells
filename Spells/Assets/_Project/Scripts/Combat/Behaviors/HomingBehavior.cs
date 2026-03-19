@@ -62,8 +62,7 @@ public class HomingBehavior : MonoBehaviour
         target = null;
         float closestDist = detectionRadius * detectionRadius;
 
-        var players = Object.FindObjectsByType<PlayerIdentity>(FindObjectsSortMode.None);
-        foreach (var player in players)
+        foreach (var player in PlayerIdentity.All)
         {
             if (player.PlayerID == ownerID) continue;
 

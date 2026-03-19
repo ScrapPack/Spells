@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -9,6 +10,12 @@ using UnityEngine;
 [RequireComponent(typeof(CircleCollider2D))]
 public class Projectile : MonoBehaviour
 {
+    /// <summary>
+    /// All currently active Projectile instances.
+    /// Populated via OnEnable/OnDisable — zero allocation, no scene scan.
+    /// </summary>
+    public static readonly List<Projectile> All = new List<Projectile>();
+
     [Header("Prefab Overrides")]
     [Tooltip("Multiplies the lifetime from CombatData. 5 = five times longer.")]
     [SerializeField] private float lifetimeMultiplier = 5f;
@@ -68,6 +75,9 @@ public class Projectile : MonoBehaviour
     private int playerLayer;
     private int groundLayer;
     private int wallLayer;
+
+    private void OnEnable()  => All.Add(this);
+    private void OnDisable() => All.Remove(this);
 
     private void Awake()
     {

@@ -62,6 +62,7 @@ public class ProjectileSpawner : MonoBehaviour
     private IInputProvider input;
     private AimController aimController;
     private BoxCollider2D col;
+    private ParrySystem parrySystem;
     private float fireCooldownTimer;
 
     // ── Initialization ────────────────────────────────────────────────────────
@@ -86,6 +87,7 @@ public class ProjectileSpawner : MonoBehaviour
         input         = GetComponent<IInputProvider>();
         aimController = GetComponent<AimController>();
         col           = GetComponent<BoxCollider2D>();
+        parrySystem   = GetComponent<ParrySystem>();
 
         if (identity == null) Debug.LogError("ProjectileSpawner: No PlayerIdentity found!", this);
     }
@@ -112,10 +114,14 @@ public class ProjectileSpawner : MonoBehaviour
             }
         }
 
-        // Fire on shoot input
-        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo)
+        // Fire on shoot input — always consume the press so an empty-mag click
+        // doesn't buffer and auto-fire when ammo refills.
+        // Parrying locks shooting for its full duration (active window + recovery).
+        bool parryLocked = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
+        if (input.ShootPressed)
         {
-            Fire();
+            if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked)
+                Fire();
             input.ConsumeShoot();
         }
     }

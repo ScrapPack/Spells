@@ -1,8 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -65,8 +63,6 @@ public class BoxArenaBuilder : MonoBehaviour
         new Color(1f,   0.3f, 0.3f),
     };
 
-    // P1 = WASD, P2 = Arrow keys
-    private static readonly string[] ControlSchemes = { "KeyboardWASD", "KeyboardArrows" };
 
     // Scene references
     private Transform[]       spawnPoints;
@@ -107,11 +103,13 @@ public class BoxArenaBuilder : MonoBehaviour
         new GameObject("SpellEffectRegistry").AddComponent<SpellEffectRegistry>();
 
         // UI clicks require an EventSystem. Create one if none exists.
+        // StandaloneInputModule reads Unity's legacy Input.mousePosition so mouse
+        // clicks on UI buttons work regardless of which gameplay input backend is used.
         if (FindAnyObjectByType<EventSystem>() == null)
         {
             var esGo = new GameObject("EventSystem");
             esGo.AddComponent<EventSystem>();
-            esGo.AddComponent<InputSystemUIInputModule>();
+            esGo.AddComponent<StandaloneInputModule>();
         }
 
         players        = new GameObject[2];
@@ -699,14 +697,7 @@ public class BoxArenaBuilder : MonoBehaviour
         Vector3 spawnPos = playerIndex < spawnPoints.Length
             ? spawnPoints[playerIndex].position : Vector3.zero;
 
-        string scheme = playerIndex < ControlSchemes.Length
-            ? ControlSchemes[playerIndex] : "Gamepad";
-
-        var playerInput = PlayerInput.Instantiate(prefab, playerIndex: playerIndex,
-            controlScheme: scheme, splitScreenIndex: -1, pairWithDevice: Keyboard.current);
-        playerInput.transform.position = spawnPos;
-
-        var go  = playerInput.gameObject;
+        var go  = Instantiate(prefab, spawnPos, Quaternion.identity);
         go.name = $"Player{playerIndex + 1}";
 
         var sr = go.GetComponent<SpriteRenderer>();

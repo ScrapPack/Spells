@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -6,11 +7,15 @@ using UnityEngine;
 /// </summary>
 public class PlayerIdentity : MonoBehaviour
 {
+    /// <summary>All currently active PlayerIdentity instances. Zero allocation, no scene scan.</summary>
+    public static readonly List<PlayerIdentity> All = new List<PlayerIdentity>();
+
     public int PlayerID { get; private set; }
 
-    /// <summary>
-    /// Set by BoxArenaBuilder on spawn.
-    /// </summary>
+    private void OnEnable()  => All.Add(this);
+    private void OnDisable() => All.Remove(this);
+
+    /// <summary>Set by BoxArenaBuilder on spawn.</summary>
     public void Initialize(int playerID)
     {
         PlayerID = playerID;

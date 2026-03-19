@@ -19,6 +19,9 @@ public class RoundTimerUI : MonoBehaviour
 
     private float startTime = -1f;
     private GUIStyle timerStyle;
+    private string cachedDisplay = "60:00";
+    private int lastSecs = -1;
+    private int lastMs   = -1;
 
     /// <summary>Call when a round begins to start the countdown.</summary>
     public void StartTimer()
@@ -42,8 +45,17 @@ public class RoundTimerUI : MonoBehaviour
         int secs = (int)TimeRemaining;
         int ms   = (int)((TimeRemaining - secs) * 100f);
 
+        // Rebuild the string only when the displayed value changes (≤100×/sec),
+        // not every OnGUI call (which fires 3–5× per frame).
+        if (secs != lastSecs || ms != lastMs)
+        {
+            cachedDisplay = $"{secs:D2}:{ms:D2}";
+            lastSecs = secs;
+            lastMs   = ms;
+        }
+
         GUI.Label(new Rect(Screen.width * 0.5f - 60f, 8f, 120f, 36f),
-            $"{secs:D2}:{ms:D2}", timerStyle);
+            cachedDisplay, timerStyle);
     }
 
     private void InitStyles()

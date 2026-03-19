@@ -52,7 +52,8 @@ public class MultiTargetCamera : MonoBehaviour
 
     private void LateUpdate()
     {
-        targets.RemoveAll(t => t == null);
+        for (int i = targets.Count - 1; i >= 0; i--)
+            if (targets[i] == null) targets.RemoveAt(i);
         if (targets.Count == 0) return;
 
         Bounds bounds = BuildBounds();
@@ -76,8 +77,8 @@ public class MultiTargetCamera : MonoBehaviour
 
         if (trackProjectiles)
         {
-            foreach (var proj in FindObjectsByType<Projectile>(FindObjectsSortMode.None))
-                bounds.Encapsulate(proj.transform.position);
+            foreach (var proj in Projectile.All)
+                if (proj != null) bounds.Encapsulate(proj.transform.position);
         }
 
         return bounds;

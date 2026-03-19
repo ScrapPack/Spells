@@ -1,152 +1,103 @@
+using Rewired;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Reads input from Unity's PlayerInput component using Send Messages mode.
-/// Implements IInputProvider so the state machine is decoupled from the Input System.
-/// PlayerInput Behavior must be set to "Send Messages" (the default).
+/// Implements IInputProvider by polling a Rewired Player each frame.
+/// The Rewired Player index is taken from PlayerIdentity.PlayerID so
+/// each player automatically reads the correct device assignment.
+///
+/// Action names must match those defined in the Rewired Input Manager asset:
+///   "Move Horizontal", "Move Vertical"
+///   "Jump", "Dash", "Shoot", "Parry", "Special"
+///   "Aim Horizontal", "Aim Vertical"
 /// </summary>
-[RequireComponent(typeof(PlayerInput))]
 public class PlayerInputHandler : MonoBehaviour, IInputProvider
 {
-    public Vector2 MoveInput { get; private set; }
-    public bool JumpPressed { get; private set; }
-    public bool JumpHeld { get; private set; }
-    public bool CrouchHeld { get; private set; }
+    // ── Rewired action name constants ─────────────────────────────────────────
+    private const string kMoveH   = "Move Horizontal";
+    private const string kMoveV   = "Move Vertical";
+    private const string kJump    = "Jump";
+    private const string kDash    = "Dash";
+    private const string kShoot   = "Shoot";
+    private const string kParry   = "Parry";
+    private const string kSpecial = "Special";
+    private const string kAimH    = "Aim Horizontal";
+    private const string kAimV    = "Aim Vertical";
 
-    // Dash inputs
-    public bool DashPressed { get; private set; }
-    public bool DashHeld { get; private set; }
-
-    // Special move input
-    public bool SpecialPressed { get; private set; }
-
-    // Combat inputs
-    public bool ShootPressed { get; private set; }
-    public bool ShootHeld { get; private set; }
-    public bool ParryPressed { get; private set; }
+    // ── IInputProvider ────────────────────────────────────────────────────────
+    public Vector2 MoveInput    { get; private set; }
+    public bool    JumpPressed  { get; private set; }
+    public bool    JumpHeld     { get; private set; }
+    public bool    CrouchHeld   { get; private set; }
+    public bool    DashPressed  { get; private set; }
+    public bool    DashHeld     { get; private set; }
+    public bool    SpecialPressed { get; private set; }
+    public bool    ShootPressed { get; private set; }
+    public bool    ShootHeld    { get; private set; }
+    public bool    ParryPressed { get; private set; }
     public Vector2 AimDirection { get; private set; }
 
-    public void ConsumeJump()
-    {
-        JumpPressed = false;
-    }
+    // ── Consume methods ───────────────────────────────────────────────────────
+    public void ConsumeJump()    => JumpPressed    = false;
+    public void ConsumeDash()    => DashPressed    = false;
+    public void ConsumeSpecial() => SpecialPressed = false;
+    public void ConsumeShoot()   => ShootPressed   = false;
+    public void ConsumeParry()   => ParryPressed   = false;
 
-    public void ConsumeDash()
-    {
-        DashPressed = false;
-    }
-
-    public void ConsumeSpecial()
-    {
-        SpecialPressed = false;
-    }
-
-    public void ConsumeShoot()
-    {
-        ShootPressed = false;
-    }
-
-    public void ConsumeParry()
-    {
-        ParryPressed = false;
-    }
-
-    /// <summary>
-    /// Reset all input flags to their neutral/unpressed state.
-    /// Call after death/respawn so stale presses don't carry into the new life.
-    /// </summary>
+    /// <summary>Reset all flags to neutral. Call after death/respawn.</summary>
     public void ClearInputState()
     {
-        MoveInput    = Vector2.zero;
-        JumpPressed  = false;
-        JumpHeld     = false;
-        CrouchHeld   = false;
-        DashPressed  = false;
-        DashHeld     = false;
-        ShootPressed = false;
-        ShootHeld    = false;
-        ParryPressed = false;
-        AimDirection = Vector2.zero;
+        MoveInput     = Vector2.zero;
+        JumpPressed   = false;
+        JumpHeld      = false;
+        CrouchHeld    = false;
+        DashPressed   = false;
+        DashHeld      = false;
+        SpecialPressed = false;
+        ShootPressed  = false;
+        ShootHeld     = false;
+        ParryPressed  = false;
+        AimDirection  = Vector2.zero;
     }
 
-    // Called by PlayerInput via Send Messages when Move action value changes
-    public void OnMove(InputValue value)
-    {
-        MoveInput = value.Get<Vector2>();
-        // Update crouch immediately on input change too (not just in Update)
-        CrouchHeld = MoveInput.y < -0.5f;
-    }
+    // ── Internal ──────────────────────────────────────────────────────────────
+    private Rewired.Player rwPlayer;
 
-    // Called by PlayerInput via Send Messages when Jump action fires
-    public void OnJump(InputValue value)
+    private void Start()
     {
-        if (value.isPressed)
-        {
-            JumpPressed = true;
-            JumpHeld = true;
-        }
-        else
-        {
-            JumpHeld = false;
-        }
-    }
+        var identity = GetComponent<PlayerIdentity>();
+        int id = identity != null ? identity.PlayerID : 0;
+        rwPlayer = ReInput.players.GetPlayer(id);
 
-    // Called by PlayerInput via Send Messages when Shoot action fires
-    public void OnShoot(InputValue value)
-    {
-        if (value.isPressed)
-        {
-            ShootPressed = true;
-            ShootHeld = true;
-        }
-        else
-        {
-            ShootHeld = false;
-        }
-    }
-
-    // Called by PlayerInput via Send Messages when Dash action fires
-    public void OnDash(InputValue value)
-    {
-        if (value.isPressed)
-        {
-            DashPressed = true;
-            DashHeld = true;
-        }
-        else
-        {
-            DashHeld = false;
-        }
-    }
-
-    // Called by PlayerInput via Send Messages when Special action fires
-    public void OnSpecial(InputValue value)
-    {
-        if (value.isPressed)
-        {
-            SpecialPressed = true;
-        }
-    }
-
-    // Called by PlayerInput via Send Messages when Parry action fires
-    public void OnParry(InputValue value)
-    {
-        if (value.isPressed)
-        {
-            ParryPressed = true;
-        }
-    }
-
-    // Called by PlayerInput via Send Messages when Aim action changes
-    public void OnAim(InputValue value)
-    {
-        AimDirection = value.Get<Vector2>();
+        if (rwPlayer == null)
+            Debug.LogError($"PlayerInputHandler: Rewired player {id} not found!", this);
     }
 
     private void Update()
     {
-        // Derive crouch from move input every frame (redundant safety — OnMove also sets this)
+        if (rwPlayer == null) return;
+
+        // Movement
+        MoveInput  = new Vector2(rwPlayer.GetAxis(kMoveH), rwPlayer.GetAxis(kMoveV));
         CrouchHeld = MoveInput.y < -0.5f;
+
+        // Jump — set JumpPressed on the frame it goes down; JumpHeld tracks hold state
+        if (rwPlayer.GetButtonDown(kJump)) JumpPressed = true;
+        JumpHeld = rwPlayer.GetButton(kJump);
+
+        // Dash
+        if (rwPlayer.GetButtonDown(kDash)) DashPressed = true;
+        DashHeld = rwPlayer.GetButton(kDash);
+
+        // Shoot
+        if (rwPlayer.GetButtonDown(kShoot)) ShootPressed = true;
+        ShootHeld = rwPlayer.GetButton(kShoot);
+
+        // Parry and Special (press-only; no held state needed)
+        if (rwPlayer.GetButtonDown(kParry))   ParryPressed   = true;
+        if (rwPlayer.GetButtonDown(kSpecial)) SpecialPressed = true;
+
+        // Aim (gamepad right stick; mouse aim is handled separately in AimController)
+        AimDirection = new Vector2(rwPlayer.GetAxis(kAimH), rwPlayer.GetAxis(kAimV));
     }
 }
