@@ -32,6 +32,10 @@ public class Projectile : MonoBehaviour
     public float HitstunDuration { get; private set; }
     public bool IsReflected { get; private set; }
 
+    /// <summary>Player ID that just reflected this projectile. Immune to hitting them briefly.</summary>
+    private int reflectedByPlayerID = -1;
+    private float reflectionImmunityTimer;
+
     // === Extension points for SpellEffects ===
 
     /// <summary>Multiplier applied to damage. Modified by Lucky Bounce, Ambush, etc.</summary>
@@ -133,6 +137,9 @@ public class Projectile : MonoBehaviour
     /// </summary>
     public void Reflect(int newOwnerID, Vector2 newDirection, float speedMultiplier)
     {
+        reflectedByPlayerID = newOwnerID;
+        reflectionImmunityTimer = 0.15f;
+
         OwnerPlayerID = newOwnerID;
         IsReflected = true;
         lifetimeTimer = 0f;
@@ -165,6 +172,9 @@ public class Projectile : MonoBehaviour
     private void Update()
     {
         if (isLanded) return;
+
+        if (reflectionImmunityTimer > 0f)
+            reflectionImmunityTimer -= Time.deltaTime;
 
         lifetimeTimer += Time.deltaTime;
         if (lifetimeTimer >= lifetime)
@@ -226,8 +236,12 @@ public class Projectile : MonoBehaviour
         var otherHealth = other.GetComponent<HealthSystem>();
         if (otherHealth == null) return;
 
-        // Check if this is the owner (skip unless reflected or CanHitOwner)
+        // Brief immunity for the player who just reflected this projectile
         var otherID = other.GetComponent<PlayerIdentity>();
+        if (otherID != null && otherID.PlayerID == reflectedByPlayerID && reflectionImmunityTimer > 0f)
+            return;
+
+        // Check if this is the owner (skip unless reflected or CanHitOwner)
         if (otherID != null && otherID.PlayerID == OwnerPlayerID && !IsReflected && !CanHitOwner)
             return;
 

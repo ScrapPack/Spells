@@ -114,11 +114,11 @@ public class ProjectileSpawner : MonoBehaviour
             }
         }
 
-        // Fire on shoot input — always consume the press so an empty-mag click
-        // doesn't buffer and auto-fire when ammo refills.
-        // Parrying locks shooting for its full duration (active window + recovery).
+
+        // Fire on shoot input (blocked while a class ability is active, e.g. shield)
+        var ability = GetComponent<ClassAbility>();
         bool parryLocked = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
-        if (input.ShootPressed)
+        if (input.ShootPressed && fireCooldownTimer <= 0f && HasAmmo && (ability == null || !ability.IsActive))
         {
             if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked)
                 Fire();
