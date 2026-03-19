@@ -39,6 +39,10 @@ public class PlayerStateMachine : MonoBehaviour
     /// </summary>
     public Vector2 PreLandingVelocity { get; set; }
 
+    /// <summary>True while the player's class ability is active (e.g. shield). Blocks jumping.</summary>
+    public bool IsAbilityActive => classAbility != null && classAbility.IsActive;
+
+    private ClassAbility classAbility;
     private bool initialized = false;
 
     private void Awake()
@@ -58,8 +62,9 @@ public class PlayerStateMachine : MonoBehaviour
         if (Input == null)
             Input = GetComponent<PlayerInputHandler>();
 
-        Controller = GetComponent<PlayerController>();
-        Physics = GetComponent<PhysicsCheck>();
+        Controller    = GetComponent<PlayerController>();
+        Physics       = GetComponent<PhysicsCheck>();
+        classAbility  = GetComponent<ClassAbility>();
 
         if (Input == null) Debug.LogError("PlayerStateMachine: No IInputProvider found! Ensure PlayerInputHandler is on this GameObject.", this);
         if (Controller == null) Debug.LogError("PlayerStateMachine: No PlayerController found!", this);
