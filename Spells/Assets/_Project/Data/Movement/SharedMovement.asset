@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a87635787b2b6a4e8bf2a0dab3aa34e, type: 3}
   m_Name: SharedMovement
   m_EditorClassIdentifier: Spells::MovementData
-  moveSpeed: 10
+  moveSpeed: 13.3
   acceleration: 100
   deceleration: 80
   dashBurstMultiplier: 1.5
@@ -39,7 +39,7 @@ MonoBehaviour:
   waveLandFriction: 30
   waveLandMinSpeed: 2
   gravityScale: 3
-  fallGravityMultiplier: 2.5
+  fallGravityMultiplier: 4
   peakGravityMultiplier: 0.4
   peakVelocityThreshold: 2
   maxFallSpeed: 20

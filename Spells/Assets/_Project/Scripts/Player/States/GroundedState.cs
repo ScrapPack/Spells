@@ -43,6 +43,7 @@ public class GroundedState : IPlayerState
             ctx.Input.ConsumeJump();
             ctx.Controller.EndWaveLand();
             ctx.Controller.ApplyJumpForce();
+            ctx.Physics.ClearGroundBuffer();
             ctx.ChangeState(ctx.AirborneState);
         }
     }
@@ -104,6 +105,7 @@ public class GroundedState : IPlayerState
             }
             ctx.Controller.ApplyJumpForce();
             ctx.Controller.TryCornerCorrect(ctx.Controller.Data.cornerCorrectDistance);
+            ctx.Physics.ClearGroundBuffer();
             ctx.ChangeState(ctx.AirborneState);
             return;
         }

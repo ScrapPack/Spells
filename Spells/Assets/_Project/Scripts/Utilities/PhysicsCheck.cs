@@ -27,6 +27,16 @@ public class PhysicsCheck : MonoBehaviour
     public LayerMask GroundLayerMask => groundLayer;
 
     /// <summary>
+    /// Clears the grounded frame buffer so IsGrounded becomes false immediately.
+    /// Call this when jumping to prevent the buffer from keeping the player grounded.
+    /// </summary>
+    public void ClearGroundBuffer()
+    {
+        groundedFrameBuffer = 0;
+        IsGrounded = false;
+    }
+
+    /// <summary>
     /// The normal of the ground surface directly below the player.
     /// (0,1) on flat ground, angled on slopes. Zero if not grounded.
     /// </summary>
