@@ -87,12 +87,43 @@ public class BoxArenaBuilder : MonoBehaviour
     private int[] roundWins;
     private bool  gameOver;
 
+    // Card pick UI controller nav state
+    private bool cardPickActive;
+    private int cardPickSelection;
+    private int cardPickLoserIndex;
+    private GameObject cardPickCanvasGo;
+    private GameObject[] cardPickCardGOs;
+    private PowerCardData[] cardPickOffers;
+    private System.Action<int> cardPickConfirmAction; // called with selected index
+    private float cardPickNavCooldown;
+
+    // Game over UI controller nav state
+    private bool gameOverUIActive;
+    private int gameOverSelection;
+    private GameObject[] gameOverButtonGOs;
+    private System.Action[] gameOverActions;
+    private float gameOverNavCooldown;
+
     // =========================================================
     // Startup
     // =========================================================
 
     private void Start()
     {
+        // Override inspector fields with menu selections if available
+        if (GameSetupData.HasSetup)
+        {
+            if (GameSetupData.PlayerClasses.Length > 0 && GameSetupData.PlayerClasses[0] != null)
+                player1ClassData = GameSetupData.PlayerClasses[0];
+            if (GameSetupData.PlayerClasses.Length > 1 && GameSetupData.PlayerClasses[1] != null)
+                player2ClassData = GameSetupData.PlayerClasses[1];
+            if (GameSetupData.RoundsToWin.HasValue)
+                roundsToWinGame = GameSetupData.RoundsToWin.Value;
+            if (GameSetupData.CardOptionsPerPick.HasValue)
+                cardOfferCount = GameSetupData.CardOptionsPerPick.Value;
+            GameSetupData.Clear();
+        }
+
         if (player1Prefab == null && player2Prefab == null)
         {
             Debug.LogError("BoxArenaBuilder: At least one player prefab must be assigned!", this);
@@ -179,6 +210,14 @@ public class BoxArenaBuilder : MonoBehaviour
         {
             UpdateDebugShopInput();
         }
+
+        // Card pick controller navigation
+        if (cardPickActive)
+            UpdateCardPickInput();
+
+        // Game over controller navigation
+        if (gameOverUIActive)
+            UpdateGameOverInput();
     }
 
     private void OpenDebugShop()
@@ -634,6 +673,11 @@ public class BoxArenaBuilder : MonoBehaviour
         CreateLabel(overlay.transform, $"{loserName}: choose a power up",
             new Vector2(0f, 120f), 28, Color.white);
 
+        // ---- Instructions ----
+        CreateLabel(overlay.transform,
+            "Left/Right: Navigate  |  A/Jump/Space: Select",
+            new Vector2(0f, 80f), 16, Color.gray);
+
         // ---- Card buttons ----
         float cardW    = 240f;
         float cardH    = 300f;
@@ -641,20 +685,116 @@ public class BoxArenaBuilder : MonoBehaviour
         float totalW   = offers.Length * cardW + (offers.Length - 1) * spacing;
         float startX   = -totalW / 2f + cardW / 2f;
 
+        // Store refs for controller nav
+        cardPickCanvasGo = canvasGo;
+        cardPickOffers = offers;
+        cardPickCardGOs = new GameObject[offers.Length];
+        cardPickSelection = 0;
+        cardPickLoserIndex = loserIndex;
+        cardPickNavCooldown = 0.3f; // initial cooldown to prevent accidental input
+
+        cardPickConfirmAction = (selectedIndex) =>
+        {
+            var card = offers[selectedIndex];
+            var inventory = players[loserIndex]?.GetComponent<CardInventory>();
+            inventory?.AddCard(card);
+            Debug.Log($"BoxArenaBuilder: {loserName} picked: {card.cardName}");
+            cardPickActive = false;
+            Destroy(canvasGo);
+            onComplete();
+        };
+
         for (int i = 0; i < offers.Length; i++)
         {
             var card       = offers[i];
             float xPos     = startX + i * (cardW + spacing);
-            var inventory  = players[loserIndex]?.GetComponent<CardInventory>();
+            int capturedIndex = i;
 
             CreateCardButton(overlay.transform, card, new Vector2(xPos, -40f),
                 new Vector2(cardW, cardH), () =>
                 {
-                    inventory?.AddCard(card);
-                    Debug.Log($"BoxArenaBuilder: {loserName} picked: {card.cardName}");
-                    Destroy(canvasGo);
-                    onComplete();
+                    if (cardPickActive)
+                        cardPickConfirmAction(capturedIndex);
                 });
+
+            // Store the card GO (it's the last child added to overlay)
+            cardPickCardGOs[i] = overlay.transform.GetChild(overlay.transform.childCount - 1).gameObject;
+        }
+
+        cardPickActive = true;
+        UpdateCardPickHighlight();
+    }
+
+    private void UpdateCardPickInput()
+    {
+        cardPickNavCooldown -= Time.unscaledDeltaTime;
+
+        // Poll the loser's Rewired player for input
+        float h = 0f;
+        bool confirmBtn = false;
+
+        if (ReInput.isReady)
+        {
+            var rw = ReInput.players.GetPlayer(cardPickLoserIndex);
+            if (rw != null)
+            {
+                h = rw.GetAxis("Move Horizontal");
+                // Accept Jump (South/A) or Shoot (East/X) as confirm
+                if (rw.GetButtonDown("Jump") || rw.GetButtonDown("Shoot"))
+                    confirmBtn = true;
+            }
+        }
+
+        // Keyboard fallback
+        if (UnityEngine.Input.GetKeyDown(KeyCode.RightArrow) || UnityEngine.Input.GetKeyDown(KeyCode.D)) h = 1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.LeftArrow) || UnityEngine.Input.GetKeyDown(KeyCode.A)) h = -1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.Space))
+            confirmBtn = true;
+
+        // Navigation
+        if (cardPickNavCooldown <= 0f)
+        {
+            bool moved = false;
+            if (h > 0.5f) { cardPickSelection++; moved = true; }
+            else if (h < -0.5f) { cardPickSelection--; moved = true; }
+
+            if (moved)
+            {
+                cardPickSelection = Mathf.Clamp(cardPickSelection, 0, cardPickOffers.Length - 1);
+                cardPickNavCooldown = 0.2f;
+                UpdateCardPickHighlight();
+            }
+        }
+
+        if (Mathf.Abs(h) < 0.3f)
+            cardPickNavCooldown = 0f;
+
+        // Confirm
+        if (confirmBtn)
+            cardPickConfirmAction?.Invoke(cardPickSelection);
+    }
+
+    private void UpdateCardPickHighlight()
+    {
+        for (int i = 0; i < cardPickCardGOs.Length; i++)
+        {
+            if (cardPickCardGOs[i] == null) continue;
+            var img = cardPickCardGOs[i].GetComponent<Image>();
+            if (img == null) continue;
+
+            var card = cardPickOffers[i];
+            if (i == cardPickSelection)
+            {
+                img.color = new Color(card.cardColor.r * 0.45f,
+                                      card.cardColor.g * 0.45f,
+                                      card.cardColor.b * 0.45f, 1f);
+            }
+            else
+            {
+                img.color = new Color(card.cardColor.r * 0.15f,
+                                      card.cardColor.g * 0.15f,
+                                      card.cardColor.b * 0.15f, 1f);
+            }
         }
     }
 
@@ -788,21 +928,106 @@ public class BoxArenaBuilder : MonoBehaviour
             $"{roundWins[0]} – {roundWins[1]}",
             new Vector2(0f, 20f), 32, Color.white);
 
-        // Retry button
-        CreateButton(panel.transform, "Retry", new Vector2(-110f, -60f), () =>
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        });
+        // Instructions
+        CreateLabel(panel.transform,
+            "Left/Right: Navigate  |  A/Jump/Space: Select",
+            new Vector2(0f, -20f), 16, Color.gray);
 
-        // Quit button
-        CreateButton(panel.transform, "Quit", new Vector2(110f, -60f), () =>
+        // Set up game over controller nav
+        gameOverButtonGOs = new GameObject[3];
+        gameOverActions = new System.Action[3];
+
+        gameOverActions[0] = () => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        gameOverActions[1] = () => SceneManager.LoadScene("MainMenu");
+        gameOverActions[2] = () =>
         {
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
             Application.Quit();
 #endif
-        });
+        };
+
+        // Retry button
+        gameOverButtonGOs[0] = CreateButton(panel.transform, "Retry", new Vector2(-160f, -60f), gameOverActions[0]);
+        // Menu button
+        gameOverButtonGOs[1] = CreateButton(panel.transform, "Menu", new Vector2(0f, -60f), gameOverActions[1]);
+        // Quit button
+        gameOverButtonGOs[2] = CreateButton(panel.transform, "Quit", new Vector2(160f, -60f), gameOverActions[2]);
+
+        gameOverSelection = 0;
+        gameOverNavCooldown = 0.3f;
+        gameOverUIActive = true;
+        UpdateGameOverHighlight();
+    }
+
+    private void UpdateGameOverInput()
+    {
+        gameOverNavCooldown -= Time.unscaledDeltaTime;
+
+        float h = 0f;
+        bool confirmBtn = false;
+
+        // Poll all Rewired players (either player can navigate)
+        if (ReInput.isReady)
+        {
+            for (int i = 0; i < ReInput.players.playerCount; i++)
+            {
+                var rw = ReInput.players.GetPlayer(i);
+                if (rw != null)
+                {
+                    float axis = rw.GetAxis("Move Horizontal");
+                    if (Mathf.Abs(axis) > Mathf.Abs(h)) h = axis;
+                    if (rw.GetButtonDown("Jump") || rw.GetButtonDown("Shoot")) confirmBtn = true;
+                }
+            }
+        }
+
+        // Keyboard fallback
+        if (UnityEngine.Input.GetKeyDown(KeyCode.RightArrow) || UnityEngine.Input.GetKeyDown(KeyCode.D)) h = 1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.LeftArrow) || UnityEngine.Input.GetKeyDown(KeyCode.A)) h = -1f;
+        if (UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.Space))
+            confirmBtn = true;
+
+        // Navigation
+        if (gameOverNavCooldown <= 0f)
+        {
+            bool moved = false;
+            if (h > 0.5f) { gameOverSelection++; moved = true; }
+            else if (h < -0.5f) { gameOverSelection--; moved = true; }
+
+            if (moved)
+            {
+                gameOverSelection = Mathf.Clamp(gameOverSelection, 0, gameOverButtonGOs.Length - 1);
+                gameOverNavCooldown = 0.2f;
+                UpdateGameOverHighlight();
+            }
+        }
+
+        if (Mathf.Abs(h) < 0.3f)
+            gameOverNavCooldown = 0f;
+
+        // Confirm
+        if (confirmBtn)
+        {
+            gameOverUIActive = false;
+            gameOverActions[gameOverSelection]?.Invoke();
+        }
+    }
+
+    private void UpdateGameOverHighlight()
+    {
+        for (int i = 0; i < gameOverButtonGOs.Length; i++)
+        {
+            if (gameOverButtonGOs[i] == null) continue;
+            var img = gameOverButtonGOs[i].GetComponent<Image>();
+            if (img == null) continue;
+
+            if (i == gameOverSelection)
+                img.color = new Color(0.28f, 0.28f, 0.35f);
+            else
+                img.color = new Color(0.15f, 0.15f, 0.18f);
+        }
     }
 
     private static GameObject CreateLabel(Transform parent, string text,
@@ -825,7 +1050,7 @@ public class BoxArenaBuilder : MonoBehaviour
         return go;
     }
 
-    private static void CreateButton(Transform parent, string label,
+    private static GameObject CreateButton(Transform parent, string label,
                                      Vector2 anchoredPos, System.Action onClick)
     {
         var go  = new GameObject(label + "Button");
@@ -867,6 +1092,8 @@ public class BoxArenaBuilder : MonoBehaviour
         txtRt.anchorMax = Vector2.one;
         txtRt.offsetMin = Vector2.zero;
         txtRt.offsetMax = Vector2.zero;
+
+        return go;
     }
 
     // =========================================================
