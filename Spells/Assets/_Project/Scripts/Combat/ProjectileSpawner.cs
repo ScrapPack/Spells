@@ -58,6 +58,30 @@ public class ProjectileSpawner : MonoBehaviour
     /// <summary>When true, normal firing is blocked (a SpellEffect is handling shooting).</summary>
     public bool IsChargingShot { get; set; }
 
+    // ── Spread ────────────────────────────────────────────────────────────────
+
+    /// <summary>How many bullets fire per shot. 1 = normal, 3 = buckshot, etc.</summary>
+    public int BulletSpreadCount { get; set; } = 1;
+
+    /// <summary>Total arc (degrees) over which spread bullets are distributed. 0 = no spread.</summary>
+    public float BulletSpreadAngle { get; set; } = 0f;
+
+    /// <summary>Damage multiplier per bullet when spread > 1. Keeps total DPS sane.</summary>
+    public float SpreadDamageMultiplier { get; set; } = 1f;
+
+    // ── Full Auto ─────────────────────────────────────────────────────────────
+
+    /// <summary>When true, holding Shoot fires continuously at full-auto rate.</summary>
+    public bool FullAutoMode { get; set; }
+
+    /// <summary>Multiplier applied to fireCooldown in full-auto mode. 1/3 = 3× fire rate.</summary>
+    public float FullAutoFireCooldownMultiplier { get; set; } = 1f;
+
+    // ── Bonus bounces ─────────────────────────────────────────────────────────
+
+    /// <summary>Extra bounces added to each spawned projectile beyond the prefab default.</summary>
+    public int BonusMaxBounces { get; set; }
+
     // ── Private state ─────────────────────────────────────────────────────────
 
     private CombatData combatData;
@@ -67,6 +91,7 @@ public class ProjectileSpawner : MonoBehaviour
     private BoxCollider2D col;
     private ParrySystem parrySystem;
     private ClassAbility classAbility;
+    private ProjectileModifierSystem modSystem;
     private float fireCooldownTimer;
 
     // ── Initialization ────────────────────────────────────────────────────────
@@ -93,6 +118,7 @@ public class ProjectileSpawner : MonoBehaviour
         col           = GetComponent<BoxCollider2D>();
         parrySystem   = GetComponent<ParrySystem>();
         classAbility  = GetComponent<ClassAbility>();
+        modSystem     = GetComponent<ProjectileModifierSystem>();
 
         if (identity == null) Debug.LogError("ProjectileSpawner: No PlayerIdentity found!", this);
     }
@@ -124,18 +150,20 @@ public class ProjectileSpawner : MonoBehaviour
         // Blocked while parrying, ability active (e.g. shield), or charge shot effect present.
         bool parryLocked   = parrySystem != null && (parrySystem.IsParrying || parrySystem.IsInRecovery);
         bool abilityLocked = classAbility != null && classAbility.IsActive;
-        bool hasChargeShot = GetComponent<ChargeShotEffect>() != null;
-        if (input.ShootPressed)
+        bool shootTap  = input.ShootPressed;
+        bool shootHold = FullAutoMode && input.ShootHeld;
+        if (shootTap || shootHold)
         {
-            if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked && !abilityLocked && !IsChargingShot && !hasChargeShot)
-                Fire();
-            input.ConsumeShoot();
+            if (fireCooldownTimer <= 0f && HasAmmo && !parryLocked && !abilityLocked && !IsChargingShot)
+                Fire(FullAutoMode ? FullAutoFireCooldownMultiplier : 1f);
+            if (shootTap)
+                input.ConsumeShoot();
         }
     }
 
     // ── Firing ────────────────────────────────────────────────────────────────
 
-    private void Fire()
+    private void Fire(float cooldownMultiplier = 1f)
     {
         if (projectilePrefab == null)
         {
@@ -143,67 +171,126 @@ public class ProjectileSpawner : MonoBehaviour
             return;
         }
 
-        // Use AimController for processed aim direction (handles mouse, stick, and fallback)
-        Vector2 aimDir = aimController != null
-            ? aimController.AimDirection
-            : Vector2.right;
+        Vector2 aimDir = aimController != null ? aimController.AimDirection : Vector2.right;
+        Vector2 center = col != null ? (Vector2)col.bounds.center  : (Vector2)transform.position;
+        Vector2 half   = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
 
-        // Spawn position: use col.bounds (world-space AABB) so the center and extents
-        // are correct even when the player is flipped via localScale.x = -1.
-        Vector2 center    = col != null ? (Vector2)col.bounds.center  : (Vector2)transform.position;
-        Vector2 half      = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
-        float   clearance = Mathf.Abs(aimDir.x) * half.x
-                          + Mathf.Abs(aimDir.y) * half.y
-                          + combatData.projectileRadius + 0.1f;
-        Vector2 spawnPos  = center + aimDir * clearance;
+        // Spawn one bullet per spread slot, fanned evenly across BulletSpreadAngle.
+        // Each bullet invokes OnProjectileFired so per-bullet effects (LuckyBounce, etc.)
+        // are applied correctly. Ammo and cooldown happen once after the loop.
+        int   count    = Mathf.Max(1, BulletSpreadCount);
+        float halfSpan = BulletSpreadAngle * 0.5f;
 
-        // Create projectile
-        GameObject projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
-        Projectile proj    = projObj.GetComponent<Projectile>();
-
-        if (proj != null)
+        for (int i = 0; i < count; i++)
         {
-            proj.CanHitOwner = true;
-            proj.Initialize(
-                identity.PlayerID,
-                aimDir,
-                combatData.projectileSpeed,
-                combatData.projectileDamage,
-                combatData.knockbackForce,
-                combatData.hitstunDuration,
-                combatData.projectileLifetime,
-                combatData.projectileRadius,
-                combatData.projectileGravity,
-                combatData.projectileBounces,
-                combatData.maxBounces,
-                combatData.projectilePierces,
-                combatData.retrievableProjectiles
-            );
+            // Full 360° ring: distribute evenly without overlap at endpoints.
+            // Partial spread: linear fan from -halfSpan to +halfSpan.
+            float angleOffset = count > 1
+                ? (Mathf.Approximately(BulletSpreadAngle, 360f)
+                    ? (float)i / count * 360f
+                    : Mathf.Lerp(-halfSpan, halfSpan, (float)i / (count - 1)))
+                : 0f;
+
+            float   rad    = angleOffset * Mathf.Deg2Rad;
+            Vector2 dir    = new Vector2(
+                aimDir.x * Mathf.Cos(rad) - aimDir.y * Mathf.Sin(rad),
+                aimDir.x * Mathf.Sin(rad) + aimDir.y * Mathf.Cos(rad));
+
+            // Recalculate clearance per-bullet direction so none spawn inside the collider
+            float   clear    = Mathf.Abs(dir.x) * half.x + Mathf.Abs(dir.y) * half.y
+                             + combatData.projectileRadius + 0.1f;
+            Vector2 spawnPos = center + dir * clear;
+
+            var projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+            var proj    = projObj.GetComponent<Projectile>();
+            if (proj != null)
+            {
+                proj.CanHitOwner = true;
+                proj.Initialize(
+                    identity.PlayerID, dir,
+                    combatData.projectileSpeed,
+                    combatData.projectileDamage * SpreadDamageMultiplier,
+                    combatData.knockbackForce,
+                    combatData.hitstunDuration,
+                    combatData.projectileLifetime,
+                    combatData.projectileRadius,
+                    combatData.projectileGravity,
+                    combatData.projectileBounces,
+                    combatData.maxBounces,
+                    combatData.projectilePierces,
+                    combatData.retrievableProjectiles);
+            }
+
+            if (BonusMaxBounces > 0)
+                proj?.AddBounces(BonusMaxBounces);
+
+            modSystem?.ProcessProjectile(projObj);
+            LastFiredProjectile = projObj;
+            OnProjectileFired.Invoke(); // per-bullet so behavior hooks apply to each bullet
         }
 
-        // Apply projectile modifiers (homing, explosive, split, etc.)
-        var modSystem = GetComponent<ProjectileModifierSystem>();
-        if (modSystem != null)
-            modSystem.ProcessProjectile(projObj);
-
-        LastFiredProjectile = projObj;
-
-        // Consume ammo — start refill timer when the last shot is fired
+        // Ammo and cooldown — once per trigger pull regardless of spread count
         CurrentAmmo--;
         if (CurrentAmmo <= 0)
             RefillCountdown = refillTime;
 
-        fireCooldownTimer = combatData.fireCooldown;
+        fireCooldownTimer = combatData.fireCooldown * cooldownMultiplier;
 
         // Analytics
         var analytics = Object.FindAnyObjectByType<CombatAnalytics>();
         if (analytics != null && identity != null)
             analytics.RecordProjectileFired(identity.PlayerID);
-
-        OnProjectileFired?.Invoke();
     }
 
     // ── External API ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Fire a free ring of bullets in all directions — no ammo cost, no cooldown.
+    /// Used by Death Blossom on reload completion.
+    /// </summary>
+    public void FireFreeRing(int bulletCount, float damageMultiplier)
+    {
+        if (projectilePrefab == null || combatData == null) return;
+
+        Vector2 center = col != null ? (Vector2)col.bounds.center  : (Vector2)transform.position;
+        Vector2 half   = col != null ? (Vector2)col.bounds.extents : new Vector2(0.4f, 0.5f);
+        int ownerID    = identity != null ? identity.PlayerID : -1;
+
+        for (int i = 0; i < bulletCount; i++)
+        {
+            float angleDeg = (float)i / bulletCount * 360f;
+            float angleRad = angleDeg * Mathf.Deg2Rad;
+            Vector2 dir = new Vector2(Mathf.Cos(angleRad), Mathf.Sin(angleRad));
+
+            float clear    = Mathf.Abs(dir.x) * half.x + Mathf.Abs(dir.y) * half.y
+                           + combatData.projectileRadius + 0.1f;
+            Vector2 spawnPos = center + dir * clear;
+
+            var projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+            var proj    = projObj.GetComponent<Projectile>();
+            if (proj != null)
+            {
+                proj.CanHitOwner = true;
+                proj.Initialize(
+                    ownerID, dir,
+                    combatData.projectileSpeed,
+                    combatData.projectileDamage * damageMultiplier,
+                    combatData.knockbackForce,
+                    combatData.hitstunDuration,
+                    combatData.projectileLifetime,
+                    combatData.projectileRadius,
+                    combatData.projectileGravity,
+                    combatData.projectileBounces,
+                    combatData.maxBounces,
+                    combatData.projectilePierces,
+                    combatData.retrievableProjectiles);
+            }
+
+            modSystem?.ProcessProjectile(projObj);
+            LastFiredProjectile = projObj;
+            OnProjectileFired.Invoke();
+        }
+    }
 
     /// <summary>
     /// Consume ammo without firing (used by ChargeShotEffect while charging).

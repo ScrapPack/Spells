@@ -64,8 +64,6 @@ public class HomingBehavior : MonoBehaviour
 
         foreach (var player in PlayerIdentity.All)
         {
-            if (player.PlayerID == ownerID) continue;
-
             var health = player.GetComponent<HealthSystem>();
             if (health == null || !health.IsAlive) continue;
 

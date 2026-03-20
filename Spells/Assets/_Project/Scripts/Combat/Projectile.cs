@@ -50,6 +50,13 @@ public class Projectile : MonoBehaviour
     /// <summary>When true, projectile can damage its owner (returning axes).</summary>
     public bool CanHitOwner { get; set; }
 
+    /// <summary>Add extra bounce capacity after Initialize. Used by Ricochet Hell.</summary>
+    public void AddBounces(int count)
+    {
+        maxBounces += count;
+        bounces = maxBounces > 0;
+    }
+
     /// <summary>Disable bouncing after Initialize (overrides prefab bulletBounces).</summary>
     public void DisableBouncing()
     {

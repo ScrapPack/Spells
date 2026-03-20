@@ -121,6 +121,87 @@ public static class CreateArenaCards
             },
         });
 
+        // ── Spread cards ──────────────────────────────────────────────────────
+
+        CreateCard(new CardDef
+        {
+            name     = "Buckshot",
+            positive = "Fires 3 bullets per shot in a wide 20° spread",
+            negative = "Each bullet deals only 50% damage — total output cut by 25%",
+            color    = new Color(0.9f, 0.6f, 0.2f),
+            hasSpecial  = true,
+            specialID   = "buckshot",
+            negativeMods = new[] { Multiplicative(StatModifier.Target.FireCooldown, 1.3f) },
+        });
+
+        CreateCard(new CardDef
+        {
+            name     = "Twin Barrel",
+            positive = "Fires 2 bullets per shot in a tight 6° spread",
+            negative = "Each bullet deals only 70% damage, reload takes 25% longer",
+            color    = new Color(0.7f, 0.7f, 0.3f),
+            hasSpecial  = true,
+            specialID   = "twin_barrel",
+            negativeMods = new[]
+            {
+                Multiplicative(StatModifier.Target.FireCooldown, 1.25f),
+            },
+        });
+
+        // ── Bullet type cards ─────────────────────────────────────────────────
+
+        CreateCard(new CardDef
+        {
+            name     = "Explosive Rounds",
+            positive = "Bullets explode on impact dealing AoE damage",
+            negative = "Bullets travel 20% slower, fire rate 25% slower",
+            color    = new Color(1.0f, 0.3f, 0.1f),
+            hasSpecial  = true,
+            specialID   = "explosive_rounds",
+            negativeMods = new[]
+            {
+                Multiplicative(StatModifier.Target.ProjectileSpeed, 0.8f),
+                Multiplicative(StatModifier.Target.FireCooldown,    1.25f),
+            },
+        });
+
+        CreateCard(new CardDef
+        {
+            name     = "Seeking Rounds",
+            positive = "Bullets curve toward the nearest enemy",
+            negative = "Bullets travel 30% slower and deal 20% less damage",
+            color    = new Color(0.4f, 0.9f, 0.7f),
+            hasSpecial  = true,
+            specialID   = "seeking_rounds",
+            negativeMods = new[]
+            {
+                Multiplicative(StatModifier.Target.ProjectileSpeed,  0.7f),
+                Multiplicative(StatModifier.Target.ProjectileDamage, 0.8f),
+            },
+        });
+
+        CreateCard(new CardDef
+        {
+            name     = "Fragmentation",
+            positive = "Bullets split into 3 fragments on impact",
+            negative = "Fire rate is 40% slower",
+            color    = new Color(0.8f, 0.5f, 0.1f),
+            hasSpecial  = true,
+            specialID   = "fragmentation",
+            negativeMods = new[] { Multiplicative(StatModifier.Target.FireCooldown, 1.4f) },
+        });
+
+        CreateCard(new CardDef
+        {
+            name     = "Ricochet Rounds",
+            positive = "Bullets redirect toward enemies after bouncing off walls",
+            negative = "Bullets deal 20% less damage",
+            color    = new Color(0.3f, 0.7f, 1.0f),
+            hasSpecial  = true,
+            specialID   = "ricochet_rounds",
+            negativeMods = new[] { Multiplicative(StatModifier.Target.ProjectileDamage, 0.8f) },
+        });
+
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"[CreateArenaCards] Done. Cards saved to {OutputFolder}");
