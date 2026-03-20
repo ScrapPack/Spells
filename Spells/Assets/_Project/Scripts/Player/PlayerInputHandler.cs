@@ -60,6 +60,11 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
         AimDirection  = Vector2.zero;
     }
 
+    /// <summary>
+    /// When false, all input reads as neutral/zero. Used to freeze players during UI screens.
+    /// </summary>
+    public bool InputEnabled { get; set; } = true;
+
     // ── Internal ──────────────────────────────────────────────────────────────
     private Rewired.Player rwPlayer;
 
@@ -76,6 +81,12 @@ public class PlayerInputHandler : MonoBehaviour, IInputProvider
     private void Update()
     {
         if (rwPlayer == null) return;
+
+        if (!InputEnabled)
+        {
+            ClearInputState();
+            return;
+        }
 
         // Movement
         MoveInput  = new Vector2(rwPlayer.GetAxis(kMoveH), rwPlayer.GetAxis(kMoveV));

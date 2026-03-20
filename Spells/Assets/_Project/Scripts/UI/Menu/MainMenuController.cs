@@ -73,6 +73,7 @@ public class MainMenuController : MonoBehaviour
     private const int MaxPlayers = 2;
     private bool[] playerConnected = new bool[MaxPlayers];
     private bool[] playerUsesGamepad = new bool[MaxPlayers];
+    private Rewired.Controller[] playerAssignedJoystick = new Rewired.Controller[MaxPlayers];
     private Text[] connectSlotTexts = new Text[MaxPlayers];
     private Image[] connectSlotBgs = new Image[MaxPlayers];
     private Text connectPromptText;
@@ -96,7 +97,7 @@ public class MainMenuController : MonoBehaviour
     private int settingsSelection;
     private int settingsRoundsToWin = 5;
     private float settingsMaxRoundTime = 90f;
-    private int settingsCardOptions = 3;
+    private int settingsCardOptions = 5;
     private bool settingsAllowDuplicates = true;
     private Text[] settingsValueTexts;
     private Image[] settingsRowBgs;
@@ -384,6 +385,13 @@ public class MainMenuController : MonoBehaviour
             case MenuState.ControllerConnect:
                 connectRoot.SetActive(true);
                 connectInputConsumed = true;
+                // Reset connect state so players must re-join
+                for (int i = 0; i < MaxPlayers; i++)
+                {
+                    playerConnected[i] = false;
+                    playerUsesGamepad[i] = false;
+                    playerAssignedJoystick[i] = null;
+                }
                 RefreshConnectUI();
                 break;
             case MenuState.CharacterSelect:
@@ -633,56 +641,96 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        // P1 keyboard is always connected
+        // --- P1 connect ---
         if (!playerConnected[0])
         {
-            playerConnected[0] = true;
-            playerUsesGamepad[0] = false;
-            PlaySfx(sfxConfirm);
-            RefreshConnectUI();
-        }
-
-        // Detect P2 join — any keyboard key (arrow keys, Enter, etc.) or gamepad button
-        if (!playerConnected[1])
-        {
-            // Any keyboard key joins P2 (except ESC which goes back)
-            bool p2KeyboardJoin = false;
-            // Check P2-specific keys: arrow keys, Enter, right shift, numpad
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)
-                || Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.LeftArrow)
-                || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.DownArrow)
-                || Input.GetKeyDown(KeyCode.RightShift) || Input.GetKeyDown(KeyCode.RightControl))
-            {
-                p2KeyboardJoin = true;
-            }
-
-            if (p2KeyboardJoin)
-            {
-                playerConnected[1] = true;
-                playerUsesGamepad[1] = false;
-                PlaySfx(sfxConfirm);
-                RefreshConnectUI();
-            }
-
-            // Check for gamepad button press on any unassigned joystick
-            if (!playerConnected[1] && ReInput.isReady)
+            // P1 gamepad: check for any joystick button
+            if (ReInput.isReady)
             {
                 foreach (var joystick in ReInput.controllers.Joysticks)
                 {
                     if (joystick.GetAnyButtonDown())
                     {
-                        // Assign this joystick to Rewired player 1 (P2)
-                        var rewiredPlayer = ReInput.players.GetPlayer(1);
-                        if (rewiredPlayer.controllers.joystickCount == 0)
-                        {
-                            rewiredPlayer.controllers.AddController(joystick, false);
-                        }
-                        playerConnected[1] = true;
-                        playerUsesGamepad[1] = true;
+                        var rw = ReInput.players.GetPlayer(0);
+                        rw.controllers.AddController(joystick, true);
+                        playerConnected[0] = true;
+                        playerUsesGamepad[0] = true;
+                        playerAssignedJoystick[0] = joystick;
                         PlaySfx(sfxConfirm);
                         RefreshConnectUI();
                         break;
                     }
+                }
+            }
+
+            // P1 keyboard: WASD or Space
+            if (!playerConnected[0])
+            {
+                if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A)
+                    || Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D)
+                    || Input.GetKeyDown(KeyCode.Space))
+                {
+                    // Assign keyboard to Rewired player 0 so PlayerInputHandler works in-game
+                    if (ReInput.isReady)
+                    {
+                        var rw = ReInput.players.GetPlayer(0);
+                        var keyboard = ReInput.controllers.Keyboard;
+                        if (!rw.controllers.ContainsController(keyboard))
+                            rw.controllers.AddController(keyboard, false);
+                    }
+                    playerConnected[0] = true;
+                    playerUsesGamepad[0] = false;
+                    PlaySfx(sfxConfirm);
+                    RefreshConnectUI();
+                }
+            }
+        }
+
+        // --- P2 connect ---
+        if (!playerConnected[1])
+        {
+            // P2 gamepad: any unassigned joystick
+            if (ReInput.isReady)
+            {
+                foreach (var joystick in ReInput.controllers.Joysticks)
+                {
+                    // Skip joystick already assigned to P1
+                    if (playerAssignedJoystick[0] == joystick) continue;
+
+                    if (joystick.GetAnyButtonDown())
+                    {
+                        var rw = ReInput.players.GetPlayer(1);
+                        rw.controllers.AddController(joystick, true);
+                        playerConnected[1] = true;
+                        playerUsesGamepad[1] = true;
+                        playerAssignedJoystick[1] = joystick;
+                        PlaySfx(sfxConfirm);
+                        RefreshConnectUI();
+                        break;
+                    }
+                }
+            }
+
+            // P2 keyboard: arrow keys, Enter, right shift
+            if (!playerConnected[1])
+            {
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)
+                    || Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.LeftArrow)
+                    || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.DownArrow)
+                    || Input.GetKeyDown(KeyCode.RightShift) || Input.GetKeyDown(KeyCode.RightControl))
+                {
+                    // Assign keyboard to Rewired player 1 so PlayerInputHandler works in-game
+                    if (ReInput.isReady)
+                    {
+                        var rw = ReInput.players.GetPlayer(1);
+                        var keyboard = ReInput.controllers.Keyboard;
+                        if (!rw.controllers.ContainsController(keyboard))
+                            rw.controllers.AddController(keyboard, false);
+                    }
+                    playerConnected[1] = true;
+                    playerUsesGamepad[1] = false;
+                    PlaySfx(sfxConfirm);
+                    RefreshConnectUI();
                 }
             }
         }

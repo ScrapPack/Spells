@@ -1,5 +1,14 @@
 using UnityEngine;
 
+public enum CardRarity
+{
+    Common,     // ~50% drop chance
+    Uncommon,   // ~25% drop chance
+    Rare,       // ~15% drop chance
+    Epic,       // ~8% drop chance
+    Legendary   // ~2% drop chance
+}
+
 /// <summary>
 /// Defines a single power card in the draft system.
 /// Every card has at least one positive and one negative effect.
@@ -21,6 +30,7 @@ public class PowerCardData : ScriptableObject
     [Header("Classification")]
     [Tooltip("Tier 1 = always available, Tier 2 = Level 2+, Tier 3 = Level 3+")]
     [Range(1, 3)] public int tier = 1;
+    public CardRarity rarity = CardRarity.Common;
     [Tooltip("Tags for card pool filtering. 'General' = available to all classes.")]
     public string[] classTags = new string[] { "General" };
 
@@ -75,4 +85,18 @@ public class PowerCardData : ScriptableObject
     {
         return stackCap == 0 || currentStackCount < stackCap;
     }
+
+    /// <summary>
+    /// Returns the selection weight for this card's rarity.
+    /// Higher weight = more likely to appear in draft offers.
+    /// </summary>
+    public float RarityWeight => rarity switch
+    {
+        CardRarity.Common    => 50f,
+        CardRarity.Uncommon  => 25f,
+        CardRarity.Rare      => 15f,
+        CardRarity.Epic      =>  8f,
+        CardRarity.Legendary =>  2f,
+        _ => 50f,
+    };
 }

@@ -39,7 +39,7 @@ public class BoxArenaBuilder : MonoBehaviour
     [Tooltip("Seconds between a kill and the next respawn or round-end screen.")]
     [SerializeField] private float fightEndDelay     = 2f;
     [Tooltip("How many card choices to offer the round loser.")]
-    [SerializeField] private int   cardOfferCount    = 3;
+    [SerializeField] private int   cardOfferCount    = 5;
 
     [Header("Arena Dimensions (interior)")]
     [SerializeField] private float arenaWidth  = 24f;
@@ -648,13 +648,29 @@ public class BoxArenaBuilder : MonoBehaviour
         var loaded = new List<PowerCardData>(Resources.LoadAll<PowerCardData>("Cards"));
         EnsureRuntimeCards(loaded);
 
-        var allCards = loaded.ToArray();
-        if (allCards.Length == 0) return;
+        // Merge inspector-assigned cards with runtime cards (deduplicate by name)
+        var allCards = new List<PowerCardData>(loaded);
+        void MergeInspector(PowerCardData[] inspectorCards)
+        {
+            if (inspectorCards == null) return;
+            foreach (var c in inspectorCards)
+            {
+                if (c != null && !allCards.Any(x => x.cardName == c.cardName))
+                    allCards.Add(c);
+            }
+        }
+        MergeInspector(player1Cards);
+        MergeInspector(player2Cards);
 
-        if (player1Cards == null || player1Cards.Length == 0)
-            player1Cards = allCards;
-        if (player2Cards == null || player2Cards.Length == 0)
-            player2Cards = allCards;
+        if (allCards.Count == 0) return;
+
+        var pool = allCards.ToArray();
+        player1Cards = pool;
+        player2Cards = pool;
+
+        Debug.Log($"BoxArenaBuilder: Card pool populated with {pool.Length} cards:");
+        foreach (var c in pool)
+            Debug.Log($"  - {c.cardName} [{c.rarity}] tags=[{string.Join(",", c.classTags)}]");
     }
 
     /// <summary>
@@ -679,7 +695,7 @@ public class BoxArenaBuilder : MonoBehaviour
         Add(MakeCard("Charge Shot",
             "\u2726 Hold shoot to charge \u2014 more ammo = bigger, stronger shot",
             "\u2717 Can't rapid fire \u2014 must hold and release",
-            new Color(1f, 0.5f, 0f), 1, "charge_shot"));
+            new Color(1f, 0.5f, 0f), 1, "charge_shot", CardRarity.Uncommon));
 
         // ── Arena stat cards ──────────────────────────────────────────────────
         {
@@ -731,18 +747,18 @@ public class BoxArenaBuilder : MonoBehaviour
         Add(MakeCard("Hair Trigger",
             "Reload is 40% faster",
             "Magazine holds 2 fewer shots",
-            new Color(1.0f, 0.85f, 0.2f), 1, "hair_trigger"));
+            new Color(1.0f, 0.85f, 0.2f), 1, "hair_trigger", CardRarity.Common));
 
         Add(MakeCard("Extended Clip",
             "3 extra shots per magazine",
             "Reload takes 80% longer",
-            new Color(0.4f, 0.9f, 0.5f), 1, "extended_clip"));
+            new Color(0.4f, 0.9f, 0.5f), 1, "extended_clip", CardRarity.Common));
 
         {
             var c = MakeCard("Overdrive",
                 "Bullets deal 50% more damage and travel 40% faster",
                 "Reload takes 150% longer (2.5x normal)",
-                new Color(1.0f, 0.4f, 0.1f), 1, "overdrive");
+                new Color(1.0f, 0.4f, 0.1f), 1, "overdrive", CardRarity.Rare);
             c.positiveEffects = new[]
             {
                 Mult(StatModifier.Target.ProjectileDamage, 1.5f),
@@ -754,7 +770,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Quick Draw",
                 "Reload is 60% faster",
                 "Bullets deal 40% less damage",
-                new Color(0.3f, 0.8f, 0.9f), 1, "quick_draw");
+                new Color(0.3f, 0.8f, 0.9f), 1, "quick_draw", CardRarity.Common);
             c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.6f) };
             Add(c);
         }
@@ -764,7 +780,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Buckshot",
                 "Fires 3 bullets per shot in a wide 20\u00b0 spread",
                 "Each bullet deals only 50% damage",
-                new Color(0.9f, 0.6f, 0.2f), 1, "buckshot");
+                new Color(0.9f, 0.6f, 0.2f), 1, "buckshot", CardRarity.Uncommon);
             c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.3f) };
             Add(c);
         }
@@ -772,7 +788,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Twin Barrel",
                 "Fires 2 bullets per shot in a tight 6\u00b0 spread",
                 "Each bullet deals only 70% damage, reload takes 25% longer",
-                new Color(0.7f, 0.7f, 0.3f), 1, "twin_barrel");
+                new Color(0.7f, 0.7f, 0.3f), 1, "twin_barrel", CardRarity.Uncommon);
             c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.25f) };
             Add(c);
         }
@@ -782,7 +798,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Explosive Rounds",
                 "Bullets explode on impact dealing AoE damage",
                 "Bullets travel 20% slower, fire rate 25% slower",
-                new Color(1.0f, 0.3f, 0.1f), 1, "explosive_rounds");
+                new Color(1.0f, 0.3f, 0.1f), 1, "explosive_rounds", CardRarity.Rare);
             c.negativeEffects = new[]
             {
                 Mult(StatModifier.Target.ProjectileSpeed, 0.8f),
@@ -794,7 +810,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Seeking Rounds",
                 "Bullets curve toward the nearest enemy",
                 "Bullets travel 30% slower and deal 20% less damage",
-                new Color(0.4f, 0.9f, 0.7f), 1, "seeking_rounds");
+                new Color(0.4f, 0.9f, 0.7f), 1, "seeking_rounds", CardRarity.Rare);
             c.negativeEffects = new[]
             {
                 Mult(StatModifier.Target.ProjectileSpeed,  0.7f),
@@ -806,7 +822,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Fragmentation",
                 "Bullets split into 3 fragments on impact",
                 "Fire rate is 40% slower",
-                new Color(0.8f, 0.5f, 0.1f), 1, "fragmentation");
+                new Color(0.8f, 0.5f, 0.1f), 1, "fragmentation", CardRarity.Rare);
             c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.4f) };
             Add(c);
         }
@@ -814,7 +830,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Ricochet Rounds",
                 "Bullets redirect toward enemies after bouncing off walls",
                 "Bullets deal 20% less damage",
-                new Color(0.3f, 0.7f, 1.0f), 1, "ricochet_rounds");
+                new Color(0.3f, 0.7f, 1.0f), 1, "ricochet_rounds", CardRarity.Uncommon);
             c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.8f) };
             Add(c);
         }
@@ -823,18 +839,18 @@ public class BoxArenaBuilder : MonoBehaviour
         Add(MakeCard("Full Auto",
             "Hold shoot for continuous fire at 3\u00d7 the normal rate",
             "Each bullet deals only 50% damage",
-            new Color(1.0f, 0.7f, 0.1f), 3, "full_auto"));
+            new Color(1.0f, 0.7f, 0.1f), 3, "full_auto", CardRarity.Epic));
 
         Add(MakeCard("Bullet Storm",
             "Every shot fires 12 bullets in a full 360\u00b0 ring",
             "Each bullet deals only 20% damage (total ~2.4\u00d7 normal)",
-            new Color(0.2f, 0.6f, 1.0f), 3, "bullet_storm"));
+            new Color(0.2f, 0.6f, 1.0f), 3, "bullet_storm", CardRarity.Epic));
 
         {
             var c = MakeCard("Death Blossom",
                 "Reloading auto-fires a free 16-bullet ring at 30% damage",
                 "Reload takes 80% longer",
-                new Color(0.9f, 0.2f, 0.5f), 3, "death_blossom");
+                new Color(0.9f, 0.2f, 0.5f), 3, "death_blossom", CardRarity.Epic);
             c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.8f) };
             Add(c);
         }
@@ -842,13 +858,13 @@ public class BoxArenaBuilder : MonoBehaviour
         Add(MakeCard("NUKE",
             "1 shot that explodes in a massive 8-unit radius at 2\u00d7 AoE damage",
             "Max 1 ammo. Bullets travel 60% slower.",
-            new Color(1.0f, 0.2f, 0.0f), 3, "nuke"));
+            new Color(1.0f, 0.2f, 0.0f), 3, "nuke", CardRarity.Legendary));
 
         {
             var c = MakeCard("Ricochet Hell",
                 "Bullets bounce 10 times and gain +20% damage per bounce",
                 "Bullets deal 30% less damage on direct hit",
-                new Color(0.1f, 0.9f, 0.5f), 3, "ricochet_hell");
+                new Color(0.1f, 0.9f, 0.5f), 3, "ricochet_hell", CardRarity.Epic);
             c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.7f) };
             Add(c);
         }
@@ -856,7 +872,7 @@ public class BoxArenaBuilder : MonoBehaviour
             var c = MakeCard("Chain Lightning",
                 "Every bullet hit chains 50% of its damage to the nearest enemy in 6 units",
                 "Bullets deal 30% less direct damage",
-                new Color(0.6f, 0.8f, 1.0f), 3, "chain_lightning");
+                new Color(0.6f, 0.8f, 1.0f), 3, "chain_lightning", CardRarity.Epic);
             c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.7f) };
             Add(c);
         }
@@ -864,12 +880,14 @@ public class BoxArenaBuilder : MonoBehaviour
         Add(MakeCard("Energy Orb",
             "Fires a massive orb that bounces endlessly and deals 5\u00d7 damage \u2014 parry it back!",
             "Only 1 ammo. Orb travels at 25% speed. 2\u00d7 reload time.",
-            new Color(0.4f, 0.9f, 1.0f), 3, "energy_orb"));
+            new Color(0.4f, 0.9f, 1.0f), 3, "energy_orb", CardRarity.Legendary));
     }
 
     private static PowerCardData MakeCard(string name, string pos, string neg,
                                           Color color, int tier,
-                                          string specialID = "")
+                                          string specialID = "",
+                                          CardRarity rarity = CardRarity.Common,
+                                          string[] classTags = null)
     {
         var c = ScriptableObject.CreateInstance<PowerCardData>();
         c.cardName            = name;
@@ -877,7 +895,8 @@ public class BoxArenaBuilder : MonoBehaviour
         c.negativeDescription = neg;
         c.cardColor           = color;
         c.tier                = tier;
-        c.classTags           = new[] { "General" };
+        c.rarity              = rarity;
+        c.classTags           = classTags ?? new[] { "General" };
         c.positiveEffects     = new StatModifier[0];
         c.negativeEffects     = new StatModifier[0];
         c.hasSpecialBehavior  = !string.IsNullOrEmpty(specialID);
@@ -894,19 +913,55 @@ public class BoxArenaBuilder : MonoBehaviour
     /// Presents up to <see cref="cardOfferCount"/> random cards from their pool.
     /// Calls <paramref name="onComplete"/> once a card is chosen (or immediately if no pool).
     /// </summary>
+    private void SetAllPlayerInput(bool enabled)
+    {
+        foreach (var p in players)
+        {
+            if (p == null) continue;
+            var handler = p.GetComponent<PlayerInputHandler>();
+            if (handler != null) handler.InputEnabled = enabled;
+        }
+    }
+
     private void ShowCardPickUI(int loserIndex, System.Action onComplete)
     {
+        // Freeze all player movement during card selection
+        SetAllPlayerInput(false);
+
         PowerCardData[] pool = loserIndex == 0 ? player1Cards : player2Cards;
 
         // No pool assigned — skip straight to next round
         if (pool == null || pool.Length == 0)
         {
+            SetAllPlayerInput(true);
             onComplete();
             return;
         }
 
-        // Pick up to cardOfferCount unique cards from the pool
-        var offers = PickRandomOffers(pool, cardOfferCount);
+        // Filter pool by class tags and stacking limits
+        ClassData classData = loserIndex == 0 ? player1ClassData : player2ClassData;
+        string[] classTags = classData != null ? classData.cardPoolTags : new[] { "General" };
+        var inventory = players[loserIndex]?.GetComponent<CardInventory>();
+
+        Debug.Log($"BoxArenaBuilder: ShowCardPickUI for player {loserIndex}, pool size={pool.Length}, classTags=[{string.Join(",", classTags)}]");
+
+        var filteredPool = new List<PowerCardData>();
+        foreach (var card in pool)
+        {
+            if (!card.IsAvailableFor(classTags, 1)) continue;
+            int stacks = inventory != null ? inventory.GetStackCount(card) : 0;
+            if (!card.CanStack(stacks)) continue;
+            filteredPool.Add(card);
+        }
+
+        if (filteredPool.Count == 0)
+        {
+            onComplete();
+            return;
+        }
+
+        // Pick up to cardOfferCount unique cards weighted by rarity
+        var offers = PickWeightedOffers(filteredPool, cardOfferCount);
 
         // ---- Canvas ----
         var canvasGo = new GameObject("CardPickCanvas");
@@ -963,6 +1018,7 @@ public class BoxArenaBuilder : MonoBehaviour
             inventory?.AddCard(card);
             Debug.Log($"BoxArenaBuilder: {loserName} picked: {card.cardName}");
             cardPickActive = false;
+            SetAllPlayerInput(true);
             Destroy(canvasGo);
             onComplete();
         };
@@ -992,23 +1048,25 @@ public class BoxArenaBuilder : MonoBehaviour
     {
         cardPickNavCooldown -= Time.unscaledDeltaTime;
 
-        // Poll the loser's Rewired player for input
+        // Poll the loser's Rewired player for input (and fallback to any player)
         float h = 0f;
         bool confirmBtn = false;
 
         if (ReInput.isReady)
         {
-            var rw = ReInput.players.GetPlayer(cardPickLoserIndex);
-            if (rw != null)
+            // Try the loser's player first, then any player with input
+            for (int p = 0; p < ReInput.players.playerCount; p++)
             {
-                h = rw.GetAxis("Move Horizontal");
-                // Accept Jump (South/A) or Shoot (East/X) as confirm
+                var rw = ReInput.players.GetPlayer(p);
+                if (rw == null) continue;
+                float axis = rw.GetAxis("Move Horizontal");
+                if (Mathf.Abs(axis) > Mathf.Abs(h)) h = axis;
                 if (rw.GetButtonDown("Jump") || rw.GetButtonDown("Shoot"))
                     confirmBtn = true;
             }
         }
 
-        // Keyboard fallback
+        // Keyboard fallback (both P1 WASD and P2 arrow keys)
         if (UnityEngine.Input.GetKeyDown(KeyCode.RightArrow) || UnityEngine.Input.GetKeyDown(KeyCode.D)) h = 1f;
         if (UnityEngine.Input.GetKeyDown(KeyCode.LeftArrow) || UnityEngine.Input.GetKeyDown(KeyCode.A)) h = -1f;
         if (UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.Space))
@@ -1061,21 +1119,39 @@ public class BoxArenaBuilder : MonoBehaviour
         }
     }
 
-    private static PowerCardData[] PickRandomOffers(PowerCardData[] pool, int count)
+    private static PowerCardData[] PickWeightedOffers(List<PowerCardData> pool, int count)
     {
-        // Shuffle a copy and take the first <count> entries
-        var indices = new System.Collections.Generic.List<int>();
-        for (int i = 0; i < pool.Length; i++) indices.Add(i);
-        for (int i = indices.Count - 1; i > 0; i--)
+        int take = Mathf.Min(count, pool.Count);
+        var result = new List<PowerCardData>(take);
+        var remaining = new List<PowerCardData>(pool);
+
+        for (int i = 0; i < take && remaining.Count > 0; i++)
         {
-            int j = Random.Range(0, i + 1);
-            (indices[i], indices[j]) = (indices[j], indices[i]);
+            // Calculate total weight of remaining cards
+            float totalWeight = 0f;
+            foreach (var card in remaining)
+                totalWeight += card.RarityWeight;
+
+            // Roll a weighted random pick
+            float roll = Random.Range(0f, totalWeight);
+            float cumulative = 0f;
+            int pickedIndex = remaining.Count - 1; // fallback
+
+            for (int j = 0; j < remaining.Count; j++)
+            {
+                cumulative += remaining[j].RarityWeight;
+                if (roll <= cumulative)
+                {
+                    pickedIndex = j;
+                    break;
+                }
+            }
+
+            result.Add(remaining[pickedIndex]);
+            remaining.RemoveAt(pickedIndex);
         }
 
-        int take   = Mathf.Min(count, pool.Length);
-        var result = new PowerCardData[take];
-        for (int i = 0; i < take; i++) result[i] = pool[indices[i]];
-        return result;
+        return result.ToArray();
     }
 
     private static void CreateCardButton(Transform parent, PowerCardData card,
@@ -1107,16 +1183,39 @@ public class BoxArenaBuilder : MonoBehaviour
         rt.sizeDelta      = size;
         rt.anchoredPosition = anchoredPos;
 
-        // Color accent bar at top
+        // Color accent bar at top — colored by rarity
+        Color rarityBarColor = card.rarity switch
+        {
+            CardRarity.Common    => new Color(0.7f, 0.7f, 0.7f),
+            CardRarity.Uncommon  => new Color(0.3f, 0.9f, 0.3f),
+            CardRarity.Rare      => new Color(0.3f, 0.5f, 1.0f),
+            CardRarity.Epic      => new Color(0.7f, 0.3f, 1.0f),
+            CardRarity.Legendary => new Color(1.0f, 0.8f, 0.1f),
+            _ => card.cardColor,
+        };
         var bar    = new GameObject("AccentBar");
         bar.transform.SetParent(go.transform, false);
         var barImg = bar.AddComponent<Image>();
-        barImg.color = card.cardColor;
+        barImg.color = rarityBarColor;
         var barRt  = bar.GetComponent<RectTransform>();
         barRt.anchorMin = new Vector2(0f, 1f);
         barRt.anchorMax = new Vector2(1f, 1f);
         barRt.offsetMin = new Vector2(0f, -8f);
         barRt.offsetMax = Vector2.zero;
+
+        // Rarity label
+        Color rarityColor = card.rarity switch
+        {
+            CardRarity.Common    => new Color(0.7f, 0.7f, 0.7f),
+            CardRarity.Uncommon  => new Color(0.3f, 0.9f, 0.3f),
+            CardRarity.Rare      => new Color(0.3f, 0.5f, 1.0f),
+            CardRarity.Epic      => new Color(0.7f, 0.3f, 1.0f),
+            CardRarity.Legendary => new Color(1.0f, 0.8f, 0.1f),
+            _ => Color.white,
+        };
+        CreateCardLabel(go.transform, card.rarity.ToString().ToUpper(),
+            new Vector2(0f, size.y * 0.42f), new Vector2(size.x - 16f, 20f),
+            11, FontStyle.Bold, rarityColor);
 
         // Card name
         CreateCardLabel(go.transform, card.cardName, new Vector2(0f, size.y * 0.33f),

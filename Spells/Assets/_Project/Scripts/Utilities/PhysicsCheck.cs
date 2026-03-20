@@ -19,6 +19,8 @@ public class PhysicsCheck : MonoBehaviour
     [SerializeField] private float groundRayDistance = 0.9f;
 
     public bool IsGrounded { get; private set; }
+    /// <summary>True when standing on top of another player (separate from terrain grounding).</summary>
+    public bool IsOnPlayerHead { get; private set; }
     public bool IsTouchingWall { get; private set; }
     public int WallDirection { get; private set; }
     public bool IsOnCeiling { get; private set; }
@@ -57,6 +59,9 @@ public class PhysicsCheck : MonoBehaviour
     private int groundedFrameBuffer;
     private const int GROUND_BUFFER_FRAMES = 3; // ~0.06s at 50Hz physics
 
+    // Separate layer mask for player-on-player head detection
+    private int playerOnlyLayerMask;
+
     private void Awake()
     {
         // Auto-detect layers if not assigned in inspector
@@ -70,7 +75,10 @@ public class PhysicsCheck : MonoBehaviour
             if (ground >= 0) groundLayer |= (1 << ground);
             if (wall >= 0) groundLayer |= (1 << wall);
             if (platform >= 0) groundLayer |= (1 << platform);
-            if (player >= 0) groundLayer |= (1 << player);
+            // Player layer NOT in groundLayer — self-detection made IsGrounded always true.
+            // Player-on-player head detection is handled separately via IsOnPlayerHead.
+
+            if (player >= 0) playerOnlyLayerMask = (1 << player);
 
             if (groundLayer == 0)
             {
@@ -90,6 +98,7 @@ public class PhysicsCheck : MonoBehaviour
                 Debug.LogWarning("PhysicsCheck: No Wall layer found! Wall slide detection will not work.");
             }
         }
+
     }
 
     private void FixedUpdate()
@@ -111,8 +120,6 @@ public class PhysicsCheck : MonoBehaviour
         bool rayHit = hit.collider != null && hit.distance <= rayGroundThreshold;
 
         // Angled raycasts to catch slopes the vertical ray misses.
-        // On a steep slope, the surface angles away from the vertical ray —
-        // fanning out at +/-20° catches it reliably.
         if (!rayHit)
         {
             Vector2 leftAngle = new Vector2(-0.36f, -1f).normalized;   // ~20° left
@@ -135,7 +142,6 @@ public class PhysicsCheck : MonoBehaviour
         bool directContact = boxHit || rayHit;
 
         // Grounded frame buffer: stay grounded for a few frames after losing contact.
-        // Prevents flickering on slopes and uneven terrain that causes jump to fail.
         if (directContact)
         {
             groundedFrameBuffer = GROUND_BUFFER_FRAMES;
@@ -146,6 +152,22 @@ public class PhysicsCheck : MonoBehaviour
         }
 
         IsGrounded = groundedFrameBuffer > 0;
+
+        // Separate player-on-player head check: overlap box on Player layer only.
+        // Uses OverlapBoxAll to avoid self-collider shadowing the other player.
+        IsOnPlayerHead = false;
+        if (!IsGrounded && playerOnlyLayerMask != 0)
+        {
+            var hits = Physics2D.OverlapBoxAll(origin, groundCheckSize, 0f, playerOnlyLayerMask);
+            for (int i = 0; i < hits.Length; i++)
+            {
+                if (hits[i].gameObject != gameObject)
+                {
+                    IsOnPlayerHead = true;
+                    break;
+                }
+            }
+        }
 
         // Get ground normal for slope detection
         if (IsGrounded && hit.collider != null)

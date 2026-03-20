@@ -12,6 +12,7 @@ public class GroundedState : IPlayerState
     public void Enter(PlayerStateMachine ctx)
     {
         this.ctx = ctx;
+        Debug.Log($"[GROUNDED-ENTER] pos={ctx.Controller.transform.position} onPlayer={ctx.Physics.IsOnPlayerHead} dashes={ctx.DashesRemaining}");
         ctx.Controller.SetGravityScale(ctx.Controller.Data.gravityScale);
         ctx.CoyoteTimer = 0f;
         waveLandGraceTimer = WAVE_LAND_GRACE;
@@ -85,7 +86,8 @@ public class GroundedState : IPlayerState
             return;
         }
 
-        if (ctx.Input.DashPressed && ctx.IsAbilityActive)
+        // Consume dash press if nothing used it (no charges or ability active)
+        if (ctx.Input.DashPressed)
             ctx.Input.ConsumeDash();
 
         // Jump — blocked while a class ability is active (e.g. shield).
@@ -94,6 +96,7 @@ public class GroundedState : IPlayerState
         if (ctx.Input.JumpPressed && !ctx.IsAbilityActive)
         {
             ctx.Input.ConsumeJump();
+            ctx.JumpBufferTimer = 0f; // Clear buffer so it doesn't auto-jump on next landing
             if (ctx.Controller.IsSliding)
             {
                 // Wave-jump: preserve horizontal momentum through the jump
