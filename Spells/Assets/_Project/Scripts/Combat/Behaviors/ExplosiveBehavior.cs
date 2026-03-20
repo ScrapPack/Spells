@@ -66,8 +66,12 @@ public class ExplosiveBehavior : MonoBehaviour
             }
         }
 
-        // Screen shake for explosion
+        // Screen shake — stronger for bigger blasts
         if (ScreenShake.Instance != null)
-            ScreenShake.Instance.Shake(0.15f, 0.12f);
+            ScreenShake.Instance.Shake(Mathf.Lerp(0.1f, 0.3f, radius / 10f),
+                                       Mathf.Lerp(0.1f, 0.25f, radius / 10f));
+
+        // Expanding ring visual
+        ExplosionVFX.Spawn(center, radius);
     }
 }

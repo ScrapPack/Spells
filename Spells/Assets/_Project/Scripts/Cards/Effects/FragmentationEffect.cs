@@ -1,22 +1,24 @@
 /// <summary>
-/// Fragmentation: bullets split into 3 fragments on impact.
-/// Fragments deal 50% damage and don't split again.
+/// Fragmentation: fires 3 bullets immediately in a wide 120° spread on each shot.
+/// Each fragment deals 50% damage. Additional stacks add one more fragment per stack.
 /// Fire-rate penalty lives on the card's negativeEffects array.
-/// Stacks add more fragments per split.
 /// </summary>
 public class FragmentationEffect : SpellEffect
 {
     protected override void OnApply()
     {
-        var modSystem = GetComponent<ProjectileModifierSystem>();
-        if (modSystem == null) return;
+        if (Spawner == null) return;
 
-        modSystem.AddModifier(new ProjectileModifier
+        if (StackCount == 1)
         {
-            type                 = ProjectileModifier.ModifierType.Split,
-            splitCount           = 3 + (StackCount - 1),
-            splitSpreadAngle     = 35f,
-            splitDamageMultiplier = 0.5f,
-        });
+            Spawner.BulletSpreadCount      = 3;
+            Spawner.BulletSpreadAngle      = 120f;
+            Spawner.SpreadDamageMultiplier *= 0.5f;
+        }
+        else
+        {
+            // Each extra stack adds another fragment; spread stays 120°
+            Spawner.BulletSpreadCount += 1;
+        }
     }
 }

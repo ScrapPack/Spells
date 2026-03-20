@@ -176,6 +176,8 @@ public class BoxArenaBuilder : MonoBehaviour
     private GameObject[] debugShopCardGOs;
     private Text debugShopPlayerLabel;
     private float debugNavCooldown;
+    private RectTransform debugShopScrollContent;
+    private int debugShopCols;
 
     private void Update()
     {
@@ -230,6 +232,7 @@ public class BoxArenaBuilder : MonoBehaviour
 
         debugShopSelection = 0;
         debugNavCooldown = 0f;
+        Time.timeScale = 0f;
 
         // ---- Canvas ----
         debugShopCanvas = new GameObject("DebugCardShop");
@@ -251,40 +254,74 @@ public class BoxArenaBuilder : MonoBehaviour
         overlayRect.offsetMin = Vector2.zero;
         overlayRect.offsetMax = Vector2.zero;
 
-        // ---- Header ----
+        // ---- Header (fixed, above the scroll area) ----
         CreateLabel(overlay.transform, "DEBUG CARD SHOP",
-            new Vector2(0f, 260f), 36, Color.yellow);
+            new Vector2(0f, 470f), 36, Color.yellow);
 
         string playerName = debugShopPlayerIndex == 0 ? "Player 1" : "Player 2";
         var playerLabelGO = CreateLabel(overlay.transform,
             $"Granting to: {playerName}  [Bumper/Tab to switch]",
-            new Vector2(0f, 210f), 20, PlayerColors[debugShopPlayerIndex]);
+            new Vector2(0f, 415f), 20, PlayerColors[debugShopPlayerIndex]);
         debugShopPlayerLabel = playerLabelGO.GetComponentInChildren<Text>();
 
-        // ---- Instructions ----
         CreateLabel(overlay.transform,
             "D-Pad/Stick: Navigate  |  A/Jump: Grant  |  Select/G: Close",
-            new Vector2(0f, 175f), 16, Color.gray);
+            new Vector2(0f, 375f), 16, Color.gray);
 
-        // ---- Card grid ----
-        float cardW = 220f;
-        float cardH = 270f;
-        float spacing = 16f;
-        int cols = Mathf.Min(debugShopCards.Length, 5);
-        float totalW = cols * cardW + (cols - 1) * spacing;
-        float startX = -totalW / 2f + cardW / 2f;
-        float startY = 100f;
+        // ---- Card layout constants ----
+        float cardW      = 220f;
+        float cardH      = 270f;
+        float spacing    = 16f;
+        float rowH       = cardH + spacing;
+        int   cols       = Mathf.Min(debugShopCards.Length, 5);
+        int   totalRows  = Mathf.CeilToInt((float)debugShopCards.Length / cols);
+        float totalW     = cols * cardW + (cols - 1) * spacing;
+        float startX     = -totalW / 2f + cardW / 2f;
+        float viewportH  = 580f;             // ~2 rows visible at once
+        float contentH   = totalRows * rowH;
+
+        debugShopCols = cols;
+
+        // ---- Scrollable viewport (clips overflow via RectMask2D) ----
+        var viewportGO = new GameObject("Viewport");
+        viewportGO.transform.SetParent(overlay.transform, false);
+        viewportGO.AddComponent<Image>().color = Color.clear; // required for RectMask2D
+        viewportGO.AddComponent<RectMask2D>();
+        var viewportRect = viewportGO.GetComponent<RectTransform>();
+        viewportRect.anchorMin        = new Vector2(0.5f, 0.5f);
+        viewportRect.anchorMax        = new Vector2(0.5f, 0.5f);
+        viewportRect.pivot            = new Vector2(0.5f, 0.5f);
+        viewportRect.sizeDelta        = new Vector2(totalW + 24f, viewportH);
+        viewportRect.anchoredPosition = new Vector2(0f, -20f);
+
+        // ---- Scrollable content (moves inside viewport) ----
+        var contentGO = new GameObject("Content");
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRect = contentGO.AddComponent<RectTransform>();
+        contentRect.anchorMin        = new Vector2(0.5f, 0.5f);
+        contentRect.anchorMax        = new Vector2(0.5f, 0.5f);
+        contentRect.pivot            = new Vector2(0.5f, 0.5f);
+        contentRect.sizeDelta        = new Vector2(totalW + 24f, contentH);
+        // Start scrolled to top: minY = -(contentH - viewportH) / 2
+        contentRect.anchoredPosition = new Vector2(0f, -(contentH - viewportH) / 2f);
+
+        debugShopScrollContent = contentRect;
+
+        // ---- Cards positioned inside content ----
+        // Content uses (0.5, 0.5) anchor/pivot, so y=0 is content center.
+        // Top of content in content-space = contentH/2, decreasing downward.
+        float contentStartY = contentH / 2f - cardH / 2f;
 
         debugShopCardGOs = new GameObject[debugShopCards.Length];
         for (int i = 0; i < debugShopCards.Length; i++)
         {
             var card = debugShopCards[i];
-            int row = i / cols;
-            int col = i % cols;
+            int row  = i / cols;
+            int col  = i % cols;
             float xPos = startX + col * (cardW + spacing);
-            float yPos = startY - row * (cardH + spacing);
+            float yPos = contentStartY - row * rowH;
 
-            var go = CreateDebugCardVisual(overlay.transform, card,
+            var go = CreateDebugCardVisual(contentGO.transform, card,
                 new Vector2(xPos, yPos), new Vector2(cardW, cardH));
             debugShopCardGOs[i] = go;
         }
@@ -403,7 +440,6 @@ public class BoxArenaBuilder : MonoBehaviour
             var card = debugShopCards[i];
             if (i == debugShopSelection)
             {
-                // Highlight selected card with bright border color
                 img.color = new Color(card.cardColor.r * 0.6f,
                                       card.cardColor.g * 0.6f,
                                       card.cardColor.b * 0.6f, 1f);
@@ -415,15 +451,38 @@ public class BoxArenaBuilder : MonoBehaviour
                                       card.cardColor.b * 0.2f, 1f);
             }
         }
+
+        // Scroll content so the selected row is centered in the viewport.
+        // Content uses (0.5,0.5) anchor/pivot: y=0 is content center, positive y scrolls down.
+        // targetY formula: places selected row's center at content-space y=0 (viewport center),
+        // then clamped so content never scrolls past its own top or bottom edge.
+        if (debugShopScrollContent != null && debugShopCols > 0)
+        {
+            const float kCardH    = 270f;
+            const float kRowH     = kCardH + 16f;  // 286
+            const float kViewportH = 580f;
+
+            float contentH = debugShopScrollContent.sizeDelta.y;
+            int   row      = debugShopSelection / debugShopCols;
+
+            float targetY = row * kRowH + kCardH / 2f - contentH / 2f;
+            float minY    = -(contentH - kViewportH) / 2f;
+            float maxY    =  (contentH - kViewportH) / 2f;
+
+            targetY = Mathf.Clamp(targetY, minY, maxY);
+            debugShopScrollContent.anchoredPosition = new Vector2(0f, targetY);
+        }
     }
 
     private void CloseDebugShop()
     {
         if (debugShopCanvas != null)
             Destroy(debugShopCanvas);
-        debugShopCanvas = null;
-        debugShopCards = null;
-        debugShopCardGOs = null;
+        debugShopCanvas        = null;
+        debugShopCards         = null;
+        debugShopCardGOs       = null;
+        debugShopScrollContent = null;
+        Time.timeScale = 1f;
     }
 
     private GameObject CreateDebugCardVisual(Transform parent, PowerCardData card,
@@ -604,22 +663,226 @@ public class BoxArenaBuilder : MonoBehaviour
     /// </summary>
     private static void EnsureRuntimeCards(List<PowerCardData> cards)
     {
-        if (!cards.Any(c => c.specialBehaviorID == "charge_shot"))
+        // Helper: create a card if it isn't already in the list (by specialBehaviorID or name).
+        void Add(PowerCardData c)
         {
-            var card = ScriptableObject.CreateInstance<PowerCardData>();
-            card.cardName = "Charge Shot";
-            card.positiveDescription = "\u2726 Hold shoot to charge \u2014 more ammo = bigger, stronger shot";
-            card.negativeDescription = "\u2717 Can't rapid fire \u2014 must hold and release";
-            card.tier = 1;
-            card.classTags = new string[] { "General" };
-            card.positiveEffects = new StatModifier[0];
-            card.negativeEffects = new StatModifier[0];
-            card.stackCap = 1;
-            card.hasSpecialBehavior = true;
-            card.specialBehaviorID = "charge_shot";
-            card.cardColor = new Color(1f, 0.5f, 0f, 1f);
-            cards.Add(card);
+            bool exists = c.hasSpecialBehavior
+                ? cards.Any(x => x.specialBehaviorID == c.specialBehaviorID)
+                : cards.Any(x => x.cardName == c.cardName);
+            if (!exists) cards.Add(c);
         }
+
+        StatModifier Mult(StatModifier.Target t, float v) => new StatModifier
+            { target = t, modType = StatModifier.ModType.Multiplicative, value = v };
+
+        // ── Charge Shot ───────────────────────────────────────────────────────
+        Add(MakeCard("Charge Shot",
+            "\u2726 Hold shoot to charge \u2014 more ammo = bigger, stronger shot",
+            "\u2717 Can't rapid fire \u2014 must hold and release",
+            new Color(1f, 0.5f, 0f), 1, "charge_shot"));
+
+        // ── Arena stat cards ──────────────────────────────────────────────────
+        {
+            var c = MakeCard("Iron Skin",
+                "Way more health (+80% max HP)",
+                "Bullets travel much slower (-40% bullet speed)",
+                new Color(0.6f, 0.8f, 0.4f), 1);
+            c.positiveEffects = new[] { Mult(StatModifier.Target.MaxHP,           1.8f) };
+            c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileSpeed, 0.6f) };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Hollow Points",
+                "Bullets deal 60% more damage",
+                "Fire rate is 80% slower",
+                new Color(0.9f, 0.4f, 0.2f), 1);
+            c.positiveEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 1.6f) };
+            c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown,     1.8f) };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Velocity Rounds",
+                "Bullets travel 80% faster",
+                "Fire rate is 60% slower",
+                new Color(0.3f, 0.6f, 1.0f), 1);
+            c.positiveEffects = new[] { Mult(StatModifier.Target.ProjectileSpeed, 1.8f) };
+            c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown,    1.6f) };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Fortified Rounds",
+                "+30% max HP and +30% bullet damage",
+                "Bullets slower (-20% speed) and slightly longer reload (+25%)",
+                new Color(0.7f, 0.5f, 0.9f), 1);
+            c.positiveEffects = new[]
+            {
+                Mult(StatModifier.Target.MaxHP,            1.3f),
+                Mult(StatModifier.Target.ProjectileDamage, 1.3f),
+            };
+            c.negativeEffects = new[]
+            {
+                Mult(StatModifier.Target.ProjectileSpeed, 0.8f),
+                Mult(StatModifier.Target.FireCooldown,    1.25f),
+            };
+            Add(c);
+        }
+
+        // ── Ammo / reload cards ───────────────────────────────────────────────
+        Add(MakeCard("Hair Trigger",
+            "Reload is 40% faster",
+            "Magazine holds 2 fewer shots",
+            new Color(1.0f, 0.85f, 0.2f), 1, "hair_trigger"));
+
+        Add(MakeCard("Extended Clip",
+            "3 extra shots per magazine",
+            "Reload takes 80% longer",
+            new Color(0.4f, 0.9f, 0.5f), 1, "extended_clip"));
+
+        {
+            var c = MakeCard("Overdrive",
+                "Bullets deal 50% more damage and travel 40% faster",
+                "Reload takes 150% longer (2.5x normal)",
+                new Color(1.0f, 0.4f, 0.1f), 1, "overdrive");
+            c.positiveEffects = new[]
+            {
+                Mult(StatModifier.Target.ProjectileDamage, 1.5f),
+                Mult(StatModifier.Target.ProjectileSpeed,  1.4f),
+            };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Quick Draw",
+                "Reload is 60% faster",
+                "Bullets deal 40% less damage",
+                new Color(0.3f, 0.8f, 0.9f), 1, "quick_draw");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.6f) };
+            Add(c);
+        }
+
+        // ── Spread cards ──────────────────────────────────────────────────────
+        {
+            var c = MakeCard("Buckshot",
+                "Fires 3 bullets per shot in a wide 20\u00b0 spread",
+                "Each bullet deals only 50% damage",
+                new Color(0.9f, 0.6f, 0.2f), 1, "buckshot");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.3f) };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Twin Barrel",
+                "Fires 2 bullets per shot in a tight 6\u00b0 spread",
+                "Each bullet deals only 70% damage, reload takes 25% longer",
+                new Color(0.7f, 0.7f, 0.3f), 1, "twin_barrel");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.25f) };
+            Add(c);
+        }
+
+        // ── Bullet type cards ─────────────────────────────────────────────────
+        {
+            var c = MakeCard("Explosive Rounds",
+                "Bullets explode on impact dealing AoE damage",
+                "Bullets travel 20% slower, fire rate 25% slower",
+                new Color(1.0f, 0.3f, 0.1f), 1, "explosive_rounds");
+            c.negativeEffects = new[]
+            {
+                Mult(StatModifier.Target.ProjectileSpeed, 0.8f),
+                Mult(StatModifier.Target.FireCooldown,    1.25f),
+            };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Seeking Rounds",
+                "Bullets curve toward the nearest enemy",
+                "Bullets travel 30% slower and deal 20% less damage",
+                new Color(0.4f, 0.9f, 0.7f), 1, "seeking_rounds");
+            c.negativeEffects = new[]
+            {
+                Mult(StatModifier.Target.ProjectileSpeed,  0.7f),
+                Mult(StatModifier.Target.ProjectileDamage, 0.8f),
+            };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Fragmentation",
+                "Bullets split into 3 fragments on impact",
+                "Fire rate is 40% slower",
+                new Color(0.8f, 0.5f, 0.1f), 1, "fragmentation");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.4f) };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Ricochet Rounds",
+                "Bullets redirect toward enemies after bouncing off walls",
+                "Bullets deal 20% less damage",
+                new Color(0.3f, 0.7f, 1.0f), 1, "ricochet_rounds");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.8f) };
+            Add(c);
+        }
+
+        // ── Super Cards ───────────────────────────────────────────────────────
+        Add(MakeCard("Full Auto",
+            "Hold shoot for continuous fire at 3\u00d7 the normal rate",
+            "Each bullet deals only 50% damage",
+            new Color(1.0f, 0.7f, 0.1f), 3, "full_auto"));
+
+        Add(MakeCard("Bullet Storm",
+            "Every shot fires 12 bullets in a full 360\u00b0 ring",
+            "Each bullet deals only 20% damage (total ~2.4\u00d7 normal)",
+            new Color(0.2f, 0.6f, 1.0f), 3, "bullet_storm"));
+
+        {
+            var c = MakeCard("Death Blossom",
+                "Reloading auto-fires a free 16-bullet ring at 30% damage",
+                "Reload takes 80% longer",
+                new Color(0.9f, 0.2f, 0.5f), 3, "death_blossom");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.FireCooldown, 1.8f) };
+            Add(c);
+        }
+
+        Add(MakeCard("NUKE",
+            "1 shot that explodes in a massive 8-unit radius at 2\u00d7 AoE damage",
+            "Max 1 ammo. Bullets travel 60% slower.",
+            new Color(1.0f, 0.2f, 0.0f), 3, "nuke"));
+
+        {
+            var c = MakeCard("Ricochet Hell",
+                "Bullets bounce 10 times and gain +20% damage per bounce",
+                "Bullets deal 30% less damage on direct hit",
+                new Color(0.1f, 0.9f, 0.5f), 3, "ricochet_hell");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.7f) };
+            Add(c);
+        }
+        {
+            var c = MakeCard("Chain Lightning",
+                "Every bullet hit chains 50% of its damage to the nearest enemy in 6 units",
+                "Bullets deal 30% less direct damage",
+                new Color(0.6f, 0.8f, 1.0f), 3, "chain_lightning");
+            c.negativeEffects = new[] { Mult(StatModifier.Target.ProjectileDamage, 0.7f) };
+            Add(c);
+        }
+
+        Add(MakeCard("Energy Orb",
+            "Fires a massive orb that bounces endlessly and deals 5\u00d7 damage \u2014 parry it back!",
+            "Only 1 ammo. Orb travels at 25% speed. 2\u00d7 reload time.",
+            new Color(0.4f, 0.9f, 1.0f), 3, "energy_orb"));
+    }
+
+    private static PowerCardData MakeCard(string name, string pos, string neg,
+                                          Color color, int tier,
+                                          string specialID = "")
+    {
+        var c = ScriptableObject.CreateInstance<PowerCardData>();
+        c.cardName            = name;
+        c.positiveDescription = pos;
+        c.negativeDescription = neg;
+        c.cardColor           = color;
+        c.tier                = tier;
+        c.classTags           = new[] { "General" };
+        c.positiveEffects     = new StatModifier[0];
+        c.negativeEffects     = new StatModifier[0];
+        c.hasSpecialBehavior  = !string.IsNullOrEmpty(specialID);
+        c.specialBehaviorID   = specialID;
+        return c;
     }
 
     // =========================================================

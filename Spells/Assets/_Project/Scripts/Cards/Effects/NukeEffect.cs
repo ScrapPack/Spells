@@ -1,11 +1,14 @@
 /// <summary>
 /// NUKE: magazine holds only 1 shot. That shot is a massive explosive round —
-/// 10-unit blast radius, 2× AoE damage multiplier, huge knockback. The direct hit
+/// 8-unit blast radius, 2× AoE damage multiplier, huge knockback. The direct hit
 /// also deals 2× damage. Bullets travel 60% slower so aiming matters.
+/// The orb has NO bounces — it detonates on the first surface it touches (wall or player).
 /// Stacks increase explosion radius and damage further.
 /// </summary>
 public class NukeEffect : SpellEffect
 {
+    private bool subscribedToFire;
+
     protected override void OnApply()
     {
         if (Spawner == null) return;
@@ -23,7 +26,7 @@ public class NukeEffect : SpellEffect
             Spawner.SpreadDamageMultiplier *= 2f;
         }
 
-        // Each stack (including first): add a massive explosion modifier
+        // Each stack: add a massive explosion modifier
         var modSystem = GetComponent<ProjectileModifierSystem>();
         if (modSystem != null)
         {
@@ -34,6 +37,31 @@ public class NukeEffect : SpellEffect
                 explosionDamageMultiplier = 2f + (StackCount - 1) * 0.5f,
                 explosionKnockback        = 20f + (StackCount - 1) * 5f,
             });
+        }
+
+        // Subscribe once — disable bouncing on every NUKE projectile so it detonates
+        // on the first wall it contacts rather than bouncing harmlessly.
+        if (!subscribedToFire)
+        {
+            Spawner.OnProjectileFired.AddListener(OnProjectileFired);
+            subscribedToFire = true;
+        }
+    }
+
+    private void OnProjectileFired()
+    {
+        if (Spawner?.LastFiredProjectile == null) return;
+
+        var proj = Spawner.LastFiredProjectile.GetComponent<Projectile>();
+        proj?.DisableBouncing();
+    }
+
+    public override void OnRemove()
+    {
+        if (Spawner != null && subscribedToFire)
+        {
+            Spawner.OnProjectileFired.RemoveListener(OnProjectileFired);
+            subscribedToFire = false;
         }
     }
 }
