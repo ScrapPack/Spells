@@ -31,9 +31,21 @@ public class SpellEffectRegistry : MonoBehaviour
     private void RegisterBuiltInEffects()
     {
         // General cards
-        Register("vampiric", typeof(VampiricEffect));
-        Register("glass_cannon", typeof(GlassCannonEffect));
-        Register("second_wind", typeof(SecondWindEffect));
+        Register("vampiric",       typeof(VampiricEffect));
+        Register("glass_cannon",   typeof(GlassCannonEffect));
+        Register("second_wind",    typeof(SecondWindEffect));
+        Register("hair_trigger",       typeof(HairTriggerEffect));
+        Register("extended_clip",     typeof(ExtendedClipEffect));
+        Register("overdrive",         typeof(OverdriveEffect));
+        Register("quick_draw",        typeof(QuickDrawEffect));
+        // Spread cards
+        Register("buckshot",          typeof(BuckshotEffect));
+        Register("twin_barrel",       typeof(TwinBarrelEffect));
+        // Bullet type cards
+        Register("explosive_rounds",  typeof(ExplosiveRoundsEffect));
+        Register("seeking_rounds",    typeof(SeekingRoundsEffect));
+        Register("fragmentation",     typeof(FragmentationEffect));
+        Register("ricochet_rounds",   typeof(RicochetRoundsEffect));
 
         // Warlock cards
         Register("blood_pact", typeof(BloodPactEffect));
@@ -70,6 +82,15 @@ public class SpellEffectRegistry : MonoBehaviour
 
         // General — Charge Shot
         Register("charge_shot", typeof(ChargeShotEffect));
+
+        // Super Cards
+        Register("full_auto",        typeof(FullAutoEffect));
+        Register("bullet_storm",     typeof(BulletStormEffect));
+        Register("death_blossom",    typeof(DeathBlossomEffect));
+        Register("nuke",             typeof(NukeEffect));
+        Register("ricochet_hell",    typeof(RicochetHellEffect));
+        Register("chain_lightning",  typeof(ChainLightningEffect));
+        Register("energy_orb",       typeof(EnergyOrbEffect));
     }
 
     /// <summary>

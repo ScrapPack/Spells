@@ -141,7 +141,7 @@ Player states (`States/`): `GroundedState`, `AirborneState`, `WallSlidingState`,
 | `SpellEffectRegistry.cs` | Instantiates and manages `SpellEffect` lifecycle |
 
 **Implemented SpellEffects** (`Cards/Effects/`):
-`AmbushEffect`, `AncestralTotemEffect`, `BerserkerEffect`, `BloodPactEffect`, `ChargeShotEffect`, `DarkTetherEffect`, `GlassCannonEffect`, `HeavyThrowEffect`, `HexMarkEffect`, `JackpotEffect`, `LichFormEffect`, `LuckyBounceEffect`, `MagneticReturnEffect`, `SecondWindEffect`, `SmokeBombEffect`, `SoulSiphonEffect`, `SpiritBondEffect`, `StickyBrewEffect`, `VampiricEffect`, `VenomDartEffect`, `VolatileMixEffect`
+`AmbushEffect`, `AncestralTotemEffect`, `BerserkerEffect`, `BloodPactEffect`, `BuckshotEffect`, `BulletStormEffect`, `ChainLightningEffect`, `ChargeShotEffect`, `DarkTetherEffect`, `DeathBlossomEffect`, `ExplosiveRoundsEffect`, `ExtendedClipEffect`, `FragmentationEffect`, `FullAutoEffect`, `GlassCannonEffect`, `HairTriggerEffect`, `HeavyThrowEffect`, `HexMarkEffect`, `JackpotEffect`, `LichFormEffect`, `LuckyBounceEffect`, `MagneticReturnEffect`, `NukeEffect`, `OverdriveEffect`, `QuickDrawEffect`, `RicochetHellEffect`, `RicochetRoundsEffect`, `SecondWindEffect`, `SeekingRoundsEffect`, `SmokeBombEffect`, `SoulSiphonEffect`, `SpiritBondEffect`, `StickyBrewEffect`, `TwinBarrelEffect`, `VampiricEffect`, `VenomDartEffect`, `VolatileMixEffect`
 
 ### Data ScriptableObjects — `Scripts/Data/`
 
