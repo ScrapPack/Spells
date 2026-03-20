@@ -31,9 +31,13 @@ public class SpellEffectRegistry : MonoBehaviour
     private void RegisterBuiltInEffects()
     {
         // General cards
-        Register("vampiric", typeof(VampiricEffect));
-        Register("glass_cannon", typeof(GlassCannonEffect));
-        Register("second_wind", typeof(SecondWindEffect));
+        Register("vampiric",       typeof(VampiricEffect));
+        Register("glass_cannon",   typeof(GlassCannonEffect));
+        Register("second_wind",    typeof(SecondWindEffect));
+        Register("hair_trigger",   typeof(HairTriggerEffect));
+        Register("extended_clip",  typeof(ExtendedClipEffect));
+        Register("overdrive",      typeof(OverdriveEffect));
+        Register("quick_draw",     typeof(QuickDrawEffect));
 
         // Warlock cards
         Register("blood_pact", typeof(BloodPactEffect));

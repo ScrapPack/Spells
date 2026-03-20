@@ -222,6 +222,14 @@ public class ProjectileSpawner : MonoBehaviour
         if (CurrentAmmo <= 0)
             RefillCountdown = refillTime;
     }
+    /// Permanently change the max ammo capacity (used by SpellEffects like Extended Clip).
+    /// Clamps to a minimum of 1. Also adjusts current ammo proportionally.
+    /// </summary>
+    public void AdjustMaxAmmo(int delta)
+    {
+        startAmmo = Mathf.Max(1, startAmmo + delta);
+        CurrentAmmo = Mathf.Clamp(CurrentAmmo + delta, 0, startAmmo);
+    }
 
     /// <summary>
     /// Return ammo (e.g. Warrior picks up a landed axe). Cancels refill if now non-empty.
