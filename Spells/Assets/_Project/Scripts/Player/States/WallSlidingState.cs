@@ -35,6 +35,10 @@ public class WallSlidingState : IPlayerState
             return;
         }
 
+        // Consume dash press if nothing used it
+        if (ctx.Input.DashPressed)
+            ctx.Input.ConsumeDash();
+
         // Wall jump — always check first so jump timing isn't affected by detach logic
         if (ctx.Input.JumpPressed)
         {

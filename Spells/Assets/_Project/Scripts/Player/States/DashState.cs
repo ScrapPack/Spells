@@ -27,6 +27,12 @@ public class DashState : IPlayerState
         // Consume the dash charge
         ctx.Input.ConsumeDash();
         ctx.DashesRemaining--;
+        Debug.Log($"[DASH-ENTER] dashesNow={ctx.DashesRemaining} grounded={ctx.Physics.IsGrounded} pos={ctx.Controller.transform.position}");
+
+        // Clear ground buffer so the player isn't falsely "grounded" during the dash.
+        // Without this, an upward dash from ground keeps IsGrounded true for several
+        // frames, allowing dash-jump to refill dashes and enabling infinite dash/jump.
+        ctx.Physics.ClearGroundBuffer();
 
         // Snap input to nearest of 8 cardinal/diagonal directions.
         // Default to facing direction if no input.

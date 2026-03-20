@@ -37,17 +37,21 @@ public class AirborneState : IPlayerState
         // Blocked while ability is active (e.g. shield).
         if (ctx.Input.DashPressed && ctx.DashesRemaining > 0 && !ctx.IsAbilityActive)
         {
+            Debug.Log($"[AIR-DASH] dashes={ctx.DashesRemaining} pos={ctx.Controller.transform.position} grounded={ctx.Physics.IsGrounded}");
             ctx.ChangeState(ctx.DashState);
             return;
         }
 
-        if (ctx.Input.DashPressed && ctx.IsAbilityActive)
+        // Consume dash press if nothing used it (no charges left or ability active)
+        if (ctx.Input.DashPressed)
             ctx.Input.ConsumeDash();
 
         // Coyote time jump — blocked while ability is active
         if (ctx.Input.JumpPressed && ctx.CoyoteTimer > 0f && !ctx.IsAbilityActive)
         {
+            Debug.Log($"[COYOTE-JUMP] coyote={ctx.CoyoteTimer:F3} pos={ctx.Controller.transform.position}");
             ctx.Input.ConsumeJump();
+            ctx.JumpBufferTimer = 0f;
             ctx.CoyoteTimer = 0f;
             ctx.Physics.ClearGroundBuffer();
             ctx.Controller.ApplyJumpForce();
@@ -58,8 +62,21 @@ public class AirborneState : IPlayerState
         // Air jump (for power cards like "Second Wind") — blocked while ability is active
         if (ctx.Input.JumpPressed && airJumpsUsed < ctx.Controller.Data.maxAirJumps && !ctx.IsAbilityActive)
         {
+            Debug.Log($"[AIR-JUMP] airJumps={airJumpsUsed}/{ctx.Controller.Data.maxAirJumps}");
             ctx.Input.ConsumeJump();
             airJumpsUsed++;
+            ctx.Controller.ApplyJumpForce();
+            jumpCut = false;
+            return;
+        }
+
+        // Head bounce: standing on another player while falling allows a jump off their head.
+        // Does NOT enter GroundedState (no charge refill), just applies jump force.
+        if (ctx.Input.JumpPressed && ctx.Physics.IsOnPlayerHead
+            && ctx.Controller.Rb.linearVelocity.y <= 0.1f && !ctx.IsAbilityActive)
+        {
+            ctx.Input.ConsumeJump();
+            ctx.JumpBufferTimer = 0f;
             ctx.Controller.ApplyJumpForce();
             jumpCut = false;
             return;
